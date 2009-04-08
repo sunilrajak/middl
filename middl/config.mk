@@ -21,6 +21,7 @@ AR=ar -ru
 CAT=cat
 RM=rm -f
 CP=cp -f
+CAT=cat
 LN=gcc $(LNFLAGS) -o
 
 _LIB=.a
@@ -38,7 +39,7 @@ endif
 S=/
 
 DIST=$(TOP)dist
-LIBNAME=libmsq$(_LIB)
+LIBNAME=libmf$(_LIB)
 CHKLIB=$(DIST)$(S)$(LIBNAME)
 
 CFLAGS=-I. -I$(DIST) -Wall $(CCOPTS)
