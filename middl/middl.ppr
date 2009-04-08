@@ -17,7 +17,7 @@ New project
 	+midll
 		+examples
 			+mpad
-				+l01c
+				-l01c
 					examples\mpad\l01c\Valentine.mp
 					examples\mpad\l01c\sth.mp
 					examples\mpad\l01c\Polyfun2.mp
@@ -47,62 +47,56 @@ New project
 			src\mf_start.h
 			src\mf_read.c
 			src\mf_priv.h
+			src\mf_instruments.c
 			src\mf_instruments.h
 			src\mf_handlers.c
 			src\mf_control.c
 			src\mf_control.h
+			src\mf_chords.c
 			src\mf_chords.h
 			src\makefile
-			src\mf_instruments.c
-			src\mf_chords.c
 		targets.mk
 		mk.bat
 		config.mk
 [Open project files]
 0=examples\mpad\mpad.c
-1=src\mf_strings.c
-2=src\mf_start.h
-3=src\mf_instruments.h
-4=src\mf_handlers.c
-5=src\hdrs.c
-6=src\makefile
-7=src\mf_chords.h
-8=config.mk
-9=src\mf_instruments.c
-10=src\mf_control.c
-11=src\mf_chords.c
+1=src\mf_start.h
+2=src\mf_instruments.h
+3=src\mf_handlers.c
+4=src\makefile
+5=src\mf_chords.h
+6=config.mk
+7=src\mf_instruments.c
+8=src\mf_control.c
+9=src\mf_chords.c
+10=examples\mpad\makefile
+11=doc\msq.txt
 [Selected Project Files]
 Main=
 Selected=src\mf_instruments.c
 [examples\mpad\mpad.c]
 TopLine=1
-Caret=13,16
-[src\mf_strings.c]
-TopLine=363
-Caret=29,380
+Caret=1,17
 [src\mf_start.h]
 TopLine=10
 Caret=16,15
 [src\mf_instruments.h]
-TopLine=246
+TopLine=229
 Caret=1,274
 [src\mf_handlers.c]
 TopLine=1
 Caret=1,1
-[src\hdrs.c]
-TopLine=46
-Caret=3,67
 [src\makefile]
-TopLine=12
+TopLine=1
 Caret=59,17
 [src\mf_chords.h]
 TopLine=1
-Caret=1,15
+Caret=29,27
 [config.mk]
-TopLine=14
+TopLine=8
 Caret=6,34
 [src\mf_instruments.c]
-TopLine=346
+TopLine=325
 Caret=22,365
 [src\mf_control.c]
 TopLine=1
@@ -110,3 +104,9 @@ Caret=1,16
 [src\mf_chords.c]
 TopLine=1
 Caret=1,16
+[examples\mpad\makefile]
+TopLine=1
+Caret=1,24
+[doc\msq.txt]
+TopLine=1
+Caret=1,1
