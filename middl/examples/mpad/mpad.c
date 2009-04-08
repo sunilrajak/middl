@@ -528,6 +528,7 @@ int wrttrack(int trknum)
         c = *pmxTokEnd(1);
         *pmxTokEnd(1) = '\0';
         k = mf_ctrlbyname(pmxTokStart(1));        
+        printf("[%s]%d\n",pmxTokStart(1),k);        
         *pmxTokEnd(1) = c;
       }
       if (k>=0) {
