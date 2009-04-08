@@ -1,0 +1,79 @@
+[Config]
+Compilator.SaveAll=0
+Compilator.Capture=1
+Compilator.HideOutput=0
+Compilator.LogType=0
+DefaultCPIndex=0
+LogtoEnd=1
+DontOpen=0
+AbsolutePath=0
+FileFormat=1
+ProjectFilesOnly=0
+[Project tree]
+New project
+	+midll
+		+examples
+		+src
+			src\mf_write.c
+			src\mf_strings.c
+			src\mf_start.h
+			src\mf_read.c
+			src\mf_priv.h
+			src\mf_instruments.h
+			src\mf_handlers.c
+			src\mf_control.h
+			src\mf_chords.h
+			src\makefile
+			src\hdrs.c
+[Open project files]
+0=src\makefile
+1=src\mf_write.c
+2=src\mf_strings.c
+3=src\mf_start.h
+4=src\mf_read.c
+5=src\mf_instruments.h
+6=src\mf_handlers.c
+7=..\msq\targets.mk
+8=..\msq\config.mk
+9=..\msq\examples\mpad\makefile
+10=..\msq\examples\mpad\l01c\Bird I.mp
+11=..\msq\examples\mpad\mpad.c
+[Selected Project Files]
+Main=
+Selected=..\msq\targets.mk
+[src\makefile]
+TopLine=1
+Caret=2,20
+[src\mf_write.c]
+TopLine=5
+Caret=13,15
+[src\mf_strings.c]
+TopLine=1
+Caret=14,18
+[src\mf_start.h]
+TopLine=45
+Caret=7,93
+[src\mf_read.c]
+TopLine=117
+Caret=1,18
+[src\mf_instruments.h]
+TopLine=1
+Caret=14,15
+[src\mf_handlers.c]
+TopLine=1
+Caret=9,48
+[..\msq\targets.mk]
+TopLine=1
+Caret=1,1
+[..\msq\config.mk]
+TopLine=5
+Caret=14,41
+[..\msq\examples\mpad\makefile]
+TopLine=1
+Caret=29,19
+[..\msq\examples\mpad\l01c\Bird I.mp]
+TopLine=1
+Caret=1,1
+[..\msq\examples\mpad\mpad.c]
+TopLine=1
+Caret=1,1
