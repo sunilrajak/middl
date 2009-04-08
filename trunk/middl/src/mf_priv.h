@@ -12,10 +12,10 @@
 ** express or implied warranty.
 */
 
-#ifndef MSQ_PRIV_H
-#define MSQ_PRIV_H
+#ifndef MIDDL_PRIV_H
+#define MIDDL_PRIV_H
 
-#include "msq.h"
+#include "mf.h"
 #include "utl.h"
 
 

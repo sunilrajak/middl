@@ -12,7 +12,8 @@
 ** express or implied warranty.
 */
 
-#ifdef MIDLL_H
+#ifndef MIDDL_H
+#define MIDDL_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,4 +91,4 @@ unsigned char mf_midinote(char note, char acc, char octave);
 #define MF_GET_TICK 0xFFFFFFFF
 #define MF_GET_CHANNEL 0xFF
 
-#endif
+

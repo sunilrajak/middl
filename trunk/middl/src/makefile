@@ -13,8 +13,9 @@ TOP=../
 
 include $(TOP)config.mk
 
-HDRS= mf_start.h mf_instruments.h mf_chords.h mf_control.h
-LIBOBJ = mf_strings$(_OBJ) mf_handlers$(_OBJ) mf_write$(_OBJ) mf_read$(_OBJ)
+HDRS= mf_start.h mf_instruments.h mf_chords.h mf_control.h mf_end.h
+LIBOBJ = mf_instruments$(_OBJ) mf_chords$(_OBJ) mf_control$(_OBJ) \
+         mf_handlers$(_OBJ) mf_write$(_OBJ) mf_read$(_OBJ)
 
 $(LIBNAME) : $(DIST)$(S)mf.h $(LIBOBJ) 
 	$(AR) $@ $(LIBOBJ)
@@ -23,11 +24,8 @@ $(LIBNAME) : $(DIST)$(S)mf.h $(LIBOBJ)
 $(DIST)$(S)mf.h: mf.h
 	$(CP) mf.h $(DIST)
 
-mf.h: hdrs$(_EXE) $(HDRS)
-	$(TOP)src/hdrs $(HDRS) > mf.h
-
-hdrs$(_EXE): hdrs.c
-	gcc -O2 -s -o $@ $<
+mf.h: $(HDRS)
+	$(CAT) $(HDRS) > mf.h
 
 clean:
 	$(RM) $(DIST)$(S)mf.h
@@ -36,7 +34,6 @@ clean:
 	$(RM) $(DIST)$(S)$(LIBNAME)
 	$(RM) $(LIBOBJ)
 	$(RM) gmon.out
-	$(RM) hdrs$(_EXE)
 
 include $(TOP)targets.mk
 
