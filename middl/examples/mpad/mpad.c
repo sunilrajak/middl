@@ -57,6 +57,7 @@
 #define TK_CTRL       x97
 #define TK_LOOSE      x98
 #define TK_VELVAR     x99
+#define TK_GCHORD     x9A
 
 #define MAXTRACK  64
 
@@ -380,8 +381,8 @@ int wrttrack(int trknum)
   char transpose = 0;
   char channel = 1;
   float ratio = 1.0;
-  unsigned char soft = 10;
-  unsigned char stress = 20;
+  unsigned char soft = 25;
+  unsigned char stress = 50;
   unsigned char velocity = gvel;
   unsigned long mode = gmode;
   char instrument = 0;
@@ -436,6 +437,7 @@ int wrttrack(int trknum)
     pmxTokSet("\\", TK_OCTDOWN)
     pmxTokSet("p<?=/>(<*d>)(<*=.>)(<*==>)", TK_PAUSE)
     pmxTokSet("-()()(<*=&->)", TK_PAUSE) 
+    pmxTokSet("<?=',>[&Kg:(<+!]>)]<?=/>(<*d>)(<*=.>)(<*==>)", TK_GCHORD)
     pmxTokSet("<?=',>[&K(<+!]>)]<?=/>(<*d>)(<*=.>)(<*==>)", TK_CHORD)
     pmxTokSet("<.>", TK_UNKNOWN)
       
@@ -674,7 +676,8 @@ int wrttrack(int trknum)
         tm = mf_curtick;
         n = 0; if (mf_isformula(crd)) n = note;
         for (t = 0; t < mf_chordlen(crd); t++) {
-          mf_note(tm, channel, transpose + (n+mf_chordnote(crd,t))+12*octave , k, duty, v);
+          mf_note(tm, channel,
+                  transpose + (n+mf_chordnote(crd,t))+12*octave , k, duty, v);
           
         } 
       }

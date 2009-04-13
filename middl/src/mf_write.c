@@ -819,7 +819,7 @@ void mf_humanize(short lw, short lq, short vw, short vq)
   looseq  = lq;
   velvarw = vw;
   velvarq = vq;
-  printf("LW: %d LQ: %d VW:%d VQ:%d\n",loosew,looseq,velvarw,velvarq);
+  /*printf("LW: %d LQ: %d VW:%d VQ:%d\n",loosew,looseq,velvarw,velvarq);*/
 }
 
 static long loose(unsigned long x)
@@ -828,7 +828,7 @@ static long loose(unsigned long x)
 
   if (loosew > 0) {
     l = (long)floor(0.5 + (float)loosew * rndq(looseq));
-    printf("Loose: %ld\n",l);
+    /*printf("Loose: %ld\n",l);*/
     l += x;
     if ( l < 0) x = 0; 
     else  x = l;
