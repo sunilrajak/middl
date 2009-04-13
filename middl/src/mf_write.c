@@ -797,6 +797,7 @@ static float rndq(int q)
 
   x1 = ranf();
   x2 = 2.0 * fabs(x1 - 0.5);
+  
   _dbgmsg("Random: %f %f\n",x1, x2);
   w = 1.0;
 
@@ -809,15 +810,16 @@ static float rndq(int q)
 
 static short loosew  = 0;
 static short looseq  = 0;
-static float velvarw = 0.0;
+static short velvarw = 0;
 static short velvarq = 0;
 
 void mf_humanize(short lw, short lq, short vw, short vq)
 {
   loosew  = lw;
   looseq  = lq;
-  velvarw = ((float)vw) / 100.0 ;
+  velvarw = vw;
   velvarq = vq;
+  printf("LW: %d LQ: %d VW:%d VQ:%d\n",loosew,looseq,velvarw,velvarq);
 }
 
 static long loose(unsigned long x)
@@ -826,9 +828,10 @@ static long loose(unsigned long x)
 
   if (loosew > 0) {
     l = (long)floor(0.5 + (float)loosew * rndq(looseq));
-    _dbgmsg("Loose: %ld\n",l);
-    if (l > 0 || -l < x)
-      x += (long)(l);
+    printf("Loose: %ld\n",l);
+    l += x;
+    if ( l < 0) x = 0; 
+    else  x = l;
   }
  return x;
 }
@@ -837,11 +840,11 @@ static char velvar(char velocity)
 {
   float t;
   long vel;
-
+  
   if (velvarw > 0) {
-    t = 1.0 + velvarw * rndq(velvarq);
-    _dbgmsg("t: %f\n",t);
+    t = 1.0 + (velvarw * rndq(velvarq)) / 100.0;
     vel = (long)(((float)velocity) * t);
+    /*printf("v: %d t: %f = %d \n",velocity, t,vel);*/
     if (vel < 0) vel = 0;
     else if (vel > 127) vel = 127;
     velocity = (char)vel;
@@ -933,11 +936,13 @@ void mf_note_on(unsigned long tick, unsigned char chan,
 * INPUTS
 *      tick  - the clock tick at which the event occurs. If humanization
 *              parameters have been set, they are applied.
-*    chan  - the channel on which the event occurs. Channels are
-*            numbered from 1 to 16.
-*  duration  - the note duration
+*      chan  - the channel on which the event occurs. Channels are
+*              numbered from 1 to 16.
 *     pitch  - the note pitch.
-*    velocity  - note velocity (0-127).
+*  duration  - the note duration
+*      duty  - Percentage (0-100) of the duration the note is
+*              actually played.
+*  velocity  - note velocity (0-127).
 *
 ********
 */
@@ -956,6 +961,20 @@ void mf_note(unsigned long tick, unsigned char chan, unsigned char pitch,
   }
   tick = set_tick(tick+duration);
 }
+
+void mf_chord(unsigned long tick, unsigned char chan, char *pitches,
+                                      long duration, char duty, char velocity)
+{
+  if (duration > 0 && velocity > 0) {
+    while (*pitches > mf_chordend) {    
+      mf_note_on (tick, chan, *pitches, velocity);
+      mf_note_off(tick + ((duration * 100)/duty), chan,  *pitches);
+      pitches++;
+    }
+  }
+  tick = set_tick(tick+duration);
+}
+
 
 /*
 ****f*  wrt_functions/mf_key_pressure

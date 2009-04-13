@@ -5,4 +5,4 @@
  
  |0 A b c $pause
  |9 ($pause($bdroll x)*3)*2 
- |7 d e f 
+ |7 d e- f 

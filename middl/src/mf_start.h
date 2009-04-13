@@ -68,6 +68,8 @@ void mf_note_on(unsigned long tick, unsigned char chan,
                                       unsigned char pitch, char volume);
 void mf_note(unsigned long tick, unsigned char chan, unsigned char pitch,
                                       long duration, char duty, char velocity);
+void mf_chord(unsigned long tick, unsigned char chan, char *pitches,
+                                      long duration, char duty, char velocity);
 void mf_key_pressure(unsigned long tick, unsigned char chan, char pitch,
                                                                   char press);
 void mf_channel_pressure(unsigned long tick,  unsigned char chan, char press);

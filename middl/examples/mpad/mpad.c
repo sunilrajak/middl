@@ -18,6 +18,9 @@
 #include <math.h>
 #include <assert.h>
 
+#define TK_IGNORE    xFE
+#define TK_UNKNOWN   xFF
+
 #define TK_TEMPO     x80
 #define TK_PPQN      x81
 #define TK_GDUTY     x82
@@ -27,7 +30,7 @@
 #define TK_GGUITAR   x86
 #define TK_GTOMS     x87
 #define TK_KEY       x88
-#define TK_UNKNOWN   xFF
+#define TK_ACCNOTE   x89
 
 #define TK_NOTE       x81
 #define TK_DEFNOTE    x82
@@ -52,6 +55,8 @@
 #define TK_PITCH      x95
 #define TK_TRANSPOSE  x96
 #define TK_CTRL       x97
+#define TK_LOOSE      x98
+#define TK_VELVAR     x99
 
 #define MAXTRACK  64
 
@@ -69,9 +74,17 @@ static int num_tracks = 0;
 
 int ppqn = 192*4;
 int tempo = 60;
+
+#define timetotick(x) ((long)(0.5+((float)(x) * (float)tempo * ppqn)/240000.0))
+
 unsigned long gmode = 0;
 unsigned char gvel = 90;
 unsigned char gduty = 100;
+
+short glooseq  = 0 ;
+short gloosew  = 0 ; 
+short gvelvarw = 0 ;
+short gvelvarq = 0 ;
 
 #define M_GUIT 2
 #define M_TOMS 3
@@ -198,33 +211,55 @@ static chs_t parsemp(chs_t mptext)
 
   mptext = chsSubStr(mptext, 0,"><s>#&L"," ");   /* remove comments */
 
+  mptext = chsSubStr(mptext, 0,">[&K(<l><!:><*!]>)]","[x&1]");
+  mptext = chsSubStr(mptext, 0,">[&K(<+=0-9(b):>)]","[x&1]");
+  
   for (t = mptext; *t; t++)  /* mpad is case insensitive */
     *t = tolower(*t);
     
   /* get globals */
   pmxScannerBegin(mptext)
    
-    pmxTokSet("<+!trpdvg>"                              , TK_UNKNOWN)  
+    pmxTokSet("<+!abcdefgtrpvk[\">"                     , TK_IGNORE)  
+    pmxTokSet("&b\"\""                                  , TK_IGNORE)    
     pmxTokSet("tempo&K(&d)"                             , TK_TEMPO)    
     pmxTokSet("resolution&K(&d)"                        , TK_PPQN)     
     pmxTokSet("ppqn&K(&d)"                              , TK_PPQN)     
     pmxTokSet("duty&K(&d)"                              , TK_GDUTY)     
     pmxTokSet("velocity&K(&d)"                          , TK_GVELOCITY) 
     pmxTokSet("globalvel&K(&d)"                         , TK_GVELOCITY) 
-    pmxTokSet("globalloose&K(&d)&K,&K(g)"               , TK_GLOOSE)   
-    pmxTokSet("globalloose&K(&d)&K,&K(&d)"              , TK_GLOOSE)   
-    pmxTokSet("globalvelvar&K(&d)&K,&K(g)"              , TK_GVELVAR)  
-    pmxTokSet("globalvelvar&K(&d)&K,&K(&d)"             , TK_GVELVAR)  
+    pmxTokSet("globalloose&K(&d)&K,&K(<?=g>&D)"         , TK_GLOOSE)   
+    pmxTokSet("globalvelvar&K(&d)&K,&K(<?=g>&D)"        , TK_GVELVAR)  
     pmxTokSet("globalguitmode"                          , TK_GGUITAR)  
     pmxTokSet("globalguiton"                            , TK_GGUITAR)  
     pmxTokSet("globaltomson"                            , TK_GTOMS)    
     pmxTokSet("key&K(&d)()&K(<?$min$maj>)"              , TK_KEY)
     pmxTokSet("key&K(<=a-g>)(<?=+&-#b>)&K(<?$min$maj>)" , TK_KEY)
-    pmxTokSet("<.>"                                     , TK_UNKNOWN)
+    pmxTokSet("<=a-g><=+&->"                            , TK_ACCNOTE)
+    pmxTokSet("<.>"                                     , TK_IGNORE)
       
   pmxTokSwitch
   
+    pmxTokCase(TK_ACCNOTE) :
+      switch (pmxTokStart(0)[1]) {
+        case '-' : pmxTokStart(0)[1] = 'b'; break;
+        case '+' : pmxTokStart(0)[1] = '#'; break;
+      } 
+      continue;
+
     pmxTokCase(TK_GLOOSE) :
+      if (pmxTokLen(2) > 0) {
+        glooseq = (*pmxTokStart(2) == 'g') ? -1 : atoi(pmxTokStart(2));
+      }
+      gloosew = timetotick(atoi(pmxTokStart(1)));
+      spcstr(pmxTokStart(0),pmxTokLen(0)); 
+      continue;
+
+    pmxTokCase(TK_GVELVAR) :
+      if (pmxTokLen(2) > 0) {
+        gvelvarq = (*pmxTokStart(2) == 'g') ? -1 : atoi(pmxTokStart(2));
+      }
+      gvelvarw = atoi(pmxTokStart(1));
       spcstr(pmxTokStart(0),pmxTokLen(0)); 
       continue;
 
@@ -263,12 +298,11 @@ static chs_t parsemp(chs_t mptext)
   pmxScannerEnd ;
 
   mptext = chsSubStr(mptext, 0,">&s"," ");               /* compact spaces */
-  mptext = chsSubStr(mptext, 0,">(<=a-g>)-","&1b");      /* avoid confusion between flats and pauses */
   mptext = chsSubFun(mptext, 0,">m(<*a>)$(<+w>)&K(&B())",getmacro);
   mptext = chsSubFun(mptext, 0,"&*>$(<+w>)",rplmacro);
   mptext = chsSubFun(mptext, 0,"&*>(&b())()&K*&K(&d)"   ,multiply);
   mptext = chsSubFun(mptext, 0,"&*>()(<+! *>)&K*&K(&d)" ,multiply);
-  mptext = chsSubStr(mptext, 0,"><+=) \t\n\r(>"," ");    /* compact spaces */
+  mptext = chsSubStr(mptext, 0,"><+= \t\n\r>"," ");    /* compact spaces */
   mptext = chsSubStr(mptext, 0,"><s>(<=-=.>)","&1");       /* compact note durations and pauses */
 
   pmxScanStr(mptext,"|(&D)&K(<*!|>)",gettracks);         /* group tracks */
@@ -337,6 +371,7 @@ int vel(int v, int stress, int soft, char modifier)
   return v;  
 }
 
+
 int wrttrack(int trknum)
 {
   char note   = 0;
@@ -351,22 +386,30 @@ int wrttrack(int trknum)
   unsigned long mode = gmode;
   char instrument = 0;
   char duty = gduty;
-  float pitch = 0.0;
-  float f;
+  short looseq  = glooseq  ;
+  short loosew  = gloosew  ; 
+  short velvarw = gvelvarw ;
+  short velvarq = gvelvarq ;
 
-  int k,c,v;
+  int k,c,v,t,n;
+  char *crd;
   char *trk;
-
+  unsigned long tm;
+  
+  
   if (trknum == 0) {
     mf_set_tempo(0, tempo, tm_bpm);
     return 0;
   }
+
+  mf_humanize(loosew, looseq, velvarw, velvarq);
 
   trk = tracks[trknum-1];
   if (trk == NULL || *trk == '\0') return 0;
 
   pmxScannerBegin(trk)
 
+    pmxTokSet("&K<?=(>&K<?=)>&K" , TK_IGNORE)
     pmxTokSet("ch&K(<+d>)", TK_CHANNEL)
     pmxTokSet("guiton", TK_GUITON)
     pmxTokSet("guitoff", TK_GUITOFF)
@@ -375,26 +418,46 @@ int wrttrack(int trknum)
     pmxTokSet("stress&K(<+d>)", TK_STRESS)
     pmxTokSet("soft&K(<+d>)", TK_SOFT)
     pmxTokSet("pitch&K(&f)", TK_PITCH)
+    pmxTokSet("loose&K(&d)&K<?=,>&K(<?=g>&D)", TK_LOOSE)   
+    pmxTokSet("velvar&K(&d)&K<?=,>&K(<?=g>&D)", TK_VELVAR)  
     pmxTokSet("u&K(<?=+&->)(<+d>)", TK_DUTY)
     pmxTokSet("v&K(<?=+&->)(<+d>)", TK_VELOCITY)
     pmxTokSet("t&K(&d)", TK_TRANSPOSE)
     pmxTokSet("<?=',>(<+d>)(<*=.>)(<*==>)", TK_NUMBER)
     pmxTokSet("ctrl&K(<+w>),(&d)", TK_CTRL)
     pmxTokSet("i&K(<*d>)(<*a>)<?=,>(&Q)", TK_INSTRUMENT)
+    pmxTokSet("<?=',>n(<?=t>)(<?=+&->)(<+d>)<?=/>(<*d>)(<*=.>)(<*==>)",TK_NUMNOTE)
+    pmxTokSet("on()(<?=+&->)(<+d>)<?=/>(<*d>)(<*=.>)(<*==>)",TK_NUMNOTE)
     pmxTokSet("<?=',>(<=a-g>)(<?=#+b>)(<*d>)<?=/>(<*d>)(<*=.>)(<*==>)", TK_NOTE)
     pmxTokSet("<?=',>(x)()()()()(<*==>)", TK_NOTE)
     pmxTokSet("o(<?=a-g>)(<?=#+b>)(<*d>)<?=/>(<*d>)" , TK_NOTE)
-    pmxTokSet("<?=',>n(<?=t>)(<?=+&->)(<+d>)<?=/>(<*d>)(<*=.>)(<*==>)",TK_NUMNOTE)
     pmxTokSet("r&K(<+d>)&K<?=/>&K(<*d>)", TK_RATIO)
     pmxTokSet("/", TK_OCTUP)
     pmxTokSet("\\", TK_OCTDOWN)
     pmxTokSet("p<?=/>(<*d>)(<*=.>)(<*==>)", TK_PAUSE)
-    pmxTokSet("-()()(<*=&->)", TK_PAUSE)
+    pmxTokSet("-()()(<*=&->)", TK_PAUSE) 
+    pmxTokSet("<?=',>[&K(<+!]>)]<?=/>(<*d>)(<*=.>)(<*==>)", TK_CHORD)
     pmxTokSet("<.>", TK_UNKNOWN)
       
   pmxTokSwitch
   
+    pmxTokCase(TK_IGNORE) :  continue;
+       
     pmxTokCase(TK_UNKNOWN) :
+      continue; 
+      
+    pmxTokCase(TK_LOOSE) :
+      if (pmxTokLen(2) > 0)
+        looseq = (*pmxTokStart(2) == 'g') ? -1 : atoi(pmxTokStart(2));
+      loosew = timetotick(atoi(pmxTokStart(1)));
+      mf_humanize(loosew, looseq, velvarw, velvarq);  
+      continue; 
+      
+    pmxTokCase(TK_VELVAR) :
+      if (pmxTokLen(2) > 0)
+        velvarq = (*pmxTokStart(2) == 'g') ? -1 : atoi(pmxTokStart(2));
+      velvarw = atoi(pmxTokStart(1));
+      mf_humanize(loosew, looseq, velvarw, velvarq);  
       continue; 
       
     pmxTokCase(TK_STRESS) :
@@ -438,12 +501,12 @@ int wrttrack(int trknum)
       else if (c>127) c = 127;
       duty = c;
       continue; 
-      
+       
     pmxTokCase(TK_NUMNOTE) :
       c = atoi(pmxTokStart(3));
       if (pmxTokLen(4) > 0) length = atoi(pmxTokStart(4));
-      k = len(ppqn,length,ratio,pmxTokLen(5),pmxTokLen(6));
-      if (pmxTokLen(2)>0) {
+      
+      if (pmxTokLen(2) > 0) {
         switch(*pmxTokStart(2)) {
           case '+' : c = note + (12 * octave) + c; break;
           case '-' : c = note + (12 * octave) - c; break;
@@ -452,8 +515,11 @@ int wrttrack(int trknum)
       if (pmxTokLen(1)==0) {
         note = c % 12; octave = c / 12;
       }
-      v = vel(velocity,stress,soft,*pmxTokStart(0));
-      mf_note(mf_curtick, channel, transpose + c, k, duty, v);      
+      if (*pmxTokStart(0) != 'o') {
+        k = len(ppqn,length,ratio,pmxTokLen(5),pmxTokLen(6));
+        v = vel(velocity,stress,soft,*pmxTokStart(0));
+        mf_note(mf_curtick, channel, transpose + c, k, duty, v);
+      }      
       continue; 
       
     pmxTokCase(TK_NOTE) :
@@ -528,7 +594,7 @@ int wrttrack(int trknum)
         c = *pmxTokEnd(1);
         *pmxTokEnd(1) = '\0';
         k = mf_ctrlbyname(pmxTokStart(1));        
-        printf("[%s]%d\n",pmxTokStart(1),k);        
+        /*printf("[%s]%d\n",pmxTokStart(1),k);*/        
         *pmxTokEnd(1) = c;
       }
       if (k>=0) {
@@ -590,6 +656,29 @@ int wrttrack(int trknum)
           break;
       }
       continue;  
+      
+    pmxTokCase(TK_CHORD) :
+      if (pmxTokLen(2) > 0) 
+        length = atoi(pmxTokStart(2));
+
+      k = len(ppqn,length,ratio,pmxTokLen(3),pmxTokLen(4));
+      v = vel(velocity,stress,soft,*pmxTokStart(0));
+      
+      c = pmxTokLen(1);
+      while (c>0 && isspace(pmxTokStart(1)[c-1])) c--;
+      t = pmxTokStart(1)[c];
+      pmxTokStart(1)[c] = '\0';
+      crd = mf_chordbyname(pmxTokStart(1));
+      pmxTokStart(1)[c] = t;
+      if (crd) {
+        tm = mf_curtick;
+        n = 0; if (mf_isformula(crd)) n = note;
+        for (t = 0; t < mf_chordlen(crd); t++) {
+          mf_note(tm, channel, transpose + (n+mf_chordnote(crd,t))+12*octave , k, duty, v);
+          
+        } 
+      }
+      continue;
       
     default:
       continue;

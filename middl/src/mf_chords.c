@@ -328,40 +328,101 @@ static char *chord_names[] = {
 
 };
 
+#define xprintf(...)
+
 static int chord_cmp(const void *a, const void *b)
 {
   return strcmp(*(char**)a, *(char **)b) ;
 }
 
-int mf_chordbyname(char *name)
-{
-  char **q;
-  
-  q = bsearch(&name, chord_names, chord_max, sizeof(char *), chord_cmp);
-                           
-  if (q == NULL) return 61;
-  return q - chord_names;
-  
-}
 
 static char crd_notes[32];
 
-char *mf_chordnotes(char base, char *type)
-{
-  int k,c;
-  
-  c = mf_chordbyname(type);
+extern char mf_note_base[];
 
-  for (k=0; k< chord_length(c); k++);
-    crd_notes[k] = base + chord_notes(c)[k];
-  crd_notes[k] = mf_chordend;
-  
+char *mf_chordbyname(char *name)
+{
+  char **q;
+  int k=0;
+  int pitch;
+  int crd;
+  char *notes;
+  int note;
+
+  char tmpname[20];
+
+  crd_notes[0] = mf_chordend;
+  while (isspace(*name)) name++;
+  xprintf("NAME:%s ",name); 
+  if (*name=='-' || isdigit(*name)) {
+    crd_notes[0] = 0x40;
+    do {
+       crd_notes[++k] = atoi(name);
+       while (*name == '-') name++;
+       while (isdigit(*name)) name++;
+       while (isspace(*name) || *name == ',') name++;
+    } while ((k<16) && (*name == '-' || isdigit(*name)));
+  }
+  else {
+    pitch = -1;
+    if (tolower(*name) == 'x') {
+      crd_notes[0] = 0x40;
+      pitch = 0;
+      name++;
+    }
+    else {
+      crd_notes[0] = 0x80;
+      pitch = tolower(*name) - 'a';
+      if ( 0 <= pitch && pitch <= 6) {
+        pitch = mf_note_base[pitch];
+        switch (*name++) {
+          case '#' : pitch++; name++;break;  
+          case 'b' : pitch--; name++;break;  
+        }
+      }
+    }
+    xprintf("NAME2:%s ",name); 
+
+    if ( pitch >= 0) {
+      crd = -1;
+      if (name[0] == 'm' && name[1] == '\0') crd = 73; /* min */
+      else if (name[0] == 0) crd = 61; /* maj */  
+      else if (name[0] > 0) {
+        if (name[0] == ':') {
+          strcpy(tmpname,"maj");
+          strncpy(tmpname+3,name,16);
+          tmpname[19]='\0';
+          name = tmpname;
+        }  
+        q = bsearch(&name, chord_names, chord_max, sizeof(char *), chord_cmp);
+        if (q != NULL)  crd = q - chord_names;
+        xprintf("NAME3:%s NUM:%d ",name,crd); 
+      }
+      
+      if (crd > 0) {
+        xprintf("CRD:%s PITCH:%d OFF: %d LEN: %d = ",
+                  chord_names[crd],pitch,chord_offset(crd),chord_length(crd)); 
+        notes = chord_notes(crd);
+        for (k=1; k<= chord_length(crd); k++) {
+          note = pitch + *notes++;
+          crd_notes[k] = note;
+          xprintf("%d,",note);
+        }
+        k--;
+      }
+    }
+  }
+  crd_notes[0] |= (k & 0x0F);
   return crd_notes;
 }
 
-int mf_gchordbyname(char *name)
+
+
+
+char *mf_gchordbyname(char *name)
 {
- return -1;
+  crd_notes[0] = mf_chordend;
+  return crd_notes;
 }
 
 
