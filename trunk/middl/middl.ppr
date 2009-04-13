@@ -69,19 +69,20 @@ New project
 7=..\..\Documents and Settings\Remo\Documenti\boxmuller.c
 8=examples\mpad\l01c\18.mp
 9=examples\mpad\l01c\Valentine.mp
+10=src\mf_chords.c
 [Selected Project Files]
 Main=
-Selected=examples\mpad\l01c\Valentine.mp
+Selected=src\mf_chords.c
 [examples\mpad\mpad.c]
-TopLine=217
-Caret=28,232
-Mark1=1,681
-BookMark1=1,411
-BookMark2=2,222
-BookMark3=26,505
+TopLine=645
+Caret=54,680
+BookMark1=1,412
+BookMark2=2,223
+BookMark3=26,507
+Mark1=1,684
 [src\mf_write.c]
-TopLine=802
-Caret=24,833
+TopLine=942
+Caret=5,969
 [examples\mpad\l01c\1.mp]
 TopLine=1
 Caret=9,8
@@ -89,8 +90,8 @@ Caret=9,8
 TopLine=1
 Caret=1,4
 [examples\mpad\l01c\musicpad.cgi]
-TopLine=723
-Caret=1,736
+TopLine=1623
+Caret=1,1649
 [examples\mpad\l01c\14.mp]
 TopLine=1
 Caret=1,1
@@ -98,7 +99,7 @@ Caret=1,1
 TopLine=1
 Caret=10,1
 [..\..\Documents and Settings\Remo\Documenti\boxmuller.c]
-TopLine=15
+TopLine=2
 Caret=1,1
 [examples\mpad\l01c\18.mp]
 TopLine=1
@@ -106,3 +107,6 @@ Caret=38,1
 [examples\mpad\l01c\Valentine.mp]
 TopLine=1
 Caret=20,8
+[src\mf_chords.c]
+TopLine=2208
+Caret=31,2227
