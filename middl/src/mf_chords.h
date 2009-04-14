@@ -114,13 +114,9 @@
 
 #define chord_max                 99
 
-#define mf_ischord(x)      ((x)[0] & 0x80)
-#define mf_isformula(x)    ((x)[0] & 0x40)
-#define mf_isgchord(x)     ((x)[0] & 0x20)
-#define mf_chordlen(x)     ((x)[0] & 0x0F)
-#define mf_chordnote(x,n)  ((x)[(n)+1])   
+#define mf_chordnote(x,n)  ((x)[n])   
  
-char *mf_chordbyname(char *name);
+char *mf_getchord(char *name,char base,char octave,char transpose);
 char *mf_gchordbyname(char *name);
 
 #define mf_chordend -128

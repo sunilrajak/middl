@@ -31,6 +31,7 @@
 #define TK_GTOMS     x87
 #define TK_KEY       x88
 #define TK_ACCNOTE   x89
+#define TK_GINSTR    x8A
 
 #define TK_NOTE       x81
 #define TK_DEFNOTE    x82
@@ -86,6 +87,8 @@ short glooseq  = 0 ;
 short gloosew  = 0 ; 
 short gvelvarw = 0 ;
 short gvelvarq = 0 ;
+char ginstr = 0;
+
 
 #define M_GUIT 2
 #define M_TOMS 3
@@ -209,6 +212,7 @@ static void spcstr(char *s,int len)
 static chs_t parsemp(chs_t mptext)
 {
   char *t;
+  int c,k;
 
   mptext = chsSubStr(mptext, 0,"><s>#&L"," ");   /* remove comments */
 
@@ -233,6 +237,7 @@ static chs_t parsemp(chs_t mptext)
     pmxTokSet("globalvelvar&K(&d)&K,&K(<?=g>&D)"        , TK_GVELVAR)  
     pmxTokSet("globalguitmode"                          , TK_GGUITAR)  
     pmxTokSet("globalguiton"                            , TK_GGUITAR)  
+    pmxTokSet("globalinstrument&K(<*d>)(<*a>)"          , TK_GINSTR)  
     pmxTokSet("globaltomson"                            , TK_GTOMS)    
     pmxTokSet("key&K(&d)()&K(<?$min$maj>)"              , TK_KEY)
     pmxTokSet("key&K(<=a-g>)(<?=+&-#b>)&K(<?$min$maj>)" , TK_KEY)
@@ -240,6 +245,21 @@ static chs_t parsemp(chs_t mptext)
     pmxTokSet("<.>"                                     , TK_IGNORE)
       
   pmxTokSwitch
+   
+    pmxTokCase(TK_GINSTR) :
+      if (pmxTokLen(1)>0) {
+        ginstr = atoi(pmxTokStart(1));
+      }
+      else if (pmxTokLen(2) > 0) {
+        c = *pmxTokEnd(2);
+        *pmxTokEnd(2) = '\0';
+        k = mf_instrbyname(pmxTokStart(2));
+        if (k >= 0)
+          ginstr = k;
+        *pmxTokEnd(2) = c;
+      }      
+      spcstr(pmxTokStart(0),pmxTokLen(0)); 
+      continue;
   
     pmxTokCase(TK_ACCNOTE) :
       switch (pmxTokStart(0)[1]) {
@@ -385,7 +405,7 @@ int wrttrack(int trknum)
   unsigned char stress = 50;
   unsigned char velocity = gvel;
   unsigned long mode = gmode;
-  char instrument = 0;
+  char instrument = ginstr ;
   char duty = gduty;
   short looseq  = glooseq  ;
   short loosew  = gloosew  ; 
@@ -407,6 +427,9 @@ int wrttrack(int trknum)
 
   trk = tracks[trknum-1];
   if (trk == NULL || *trk == '\0') return 0;
+
+  if (instrument != 0)
+     mf_program_change(mf_curtick, channel, instrument);
 
   pmxScannerBegin(trk)
 
@@ -670,18 +693,10 @@ int wrttrack(int trknum)
       while (c>0 && isspace(pmxTokStart(1)[c-1])) c--;
       t = pmxTokStart(1)[c];
       pmxTokStart(1)[c] = '\0';
-      crd = mf_chordbyname(pmxTokStart(1));
+      crd = mf_getchord(pmxTokStart(1), note, octave, transpose);
       pmxTokStart(1)[c] = t;
-      if (crd) {
-        tm = mf_curtick;
-        n = 0; if (mf_isformula(crd)) n = note;
-        for (t = 0; t < mf_chordlen(crd); t++) {
-          mf_note(tm, channel,
-                  transpose + (n+mf_chordnote(crd,t))+12*octave , k, duty, v);
-          
-        } 
-      }
-      continue;
+      
+      mf_chord(mf_curtick, channel, crd, k, duty,  v);
       
     default:
       continue;

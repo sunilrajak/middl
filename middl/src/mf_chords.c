@@ -2159,7 +2159,7 @@ static char crd_notes[32];
 
 extern char mf_note_base[];
 
-char *mf_chordbyname(char *name)
+char *mf_getchord(char *name,char base,char octave,char transpose)
 {
   char **q;
   int k=0;
@@ -2174,9 +2174,8 @@ char *mf_chordbyname(char *name)
   while (isspace(*name)) name++;
   xprintf("NAME:%s ",name); 
   if (*name=='-' || isdigit(*name)) {
-    crd_notes[0] = 0x40;
     do {
-       crd_notes[++k] = atoi(name);
+       crd_notes[k++] = transpose + (base+atoi(name) + 12 * octave);
        while (*name == '-') name++;
        while (isdigit(*name)) name++;
        while (isspace(*name) || *name == ',') name++;
@@ -2185,12 +2184,10 @@ char *mf_chordbyname(char *name)
   else {
     pitch = -1;
     if (tolower(*name) == 'x') {
-      crd_notes[0] = 0x40;
-      pitch = 0;
+      pitch = base;
       name++;
     }
     else {
-      crd_notes[0] = 0x80;
       pitch = tolower(*name) - 'a';
       if ( 0 <= pitch && pitch <= 6) {
         pitch = mf_note_base[pitch];
@@ -2199,10 +2196,7 @@ char *mf_chordbyname(char *name)
           case 'b' : pitch--; name++;break;  
         }
       }
-    }
-    xprintf("NAME2:%s ",name); 
-
-    if ( pitch >= 0) {
+      else pitch = base;
       crd = -1;
       if (name[0] == 'm' && name[1] == '\0') crd = 73; /* min */
       else if (name[0] == 0) crd = 61; /* maj */  
@@ -2222,23 +2216,22 @@ char *mf_chordbyname(char *name)
         xprintf("CRD:%s PITCH:%d OFF: %d LEN: %d = ",
                   chord_names[crd],pitch,chord_offset(crd),chord_length(crd)); 
         notes = chord_notes(crd);
-        for (k=1; k<= chord_length(crd); k++) {
-          note = pitch + *notes++;
+        for (k=0; k< chord_length(crd); k++) {
+          note = transpose + (pitch + *notes++) + 12 * octave;
           crd_notes[k] = note;
           xprintf("%d,",note);
         }
-        k--;
       }
     }
   }
-  crd_notes[0] |= (k & 0x0F);
+  crd_notes[k] = mf_chordend;
   return crd_notes;
 }
 
 
 
 
-char *mf_gchordbyname(char *name)
+char *mf_getgchord(char *name)
 {
   crd_notes[0] = mf_chordend;
   return crd_notes;

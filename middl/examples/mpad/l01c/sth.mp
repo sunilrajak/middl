@@ -1,12 +1,15 @@
 # Stairway to Heaven - Guitar Intro
 
-tempo 100 duty 100 stress 30 soft 20
+tempo 80 duty 100 stress 30 soft 20
+#globalloose 5,g globalvelvar 3,3
+globalguiton
+globalinstrument 25
 
-|0 ch1 i25,"Guitar" guiton 
-|  ch1 i25 guiton
-|  ch1 i25 guiton
-|  ch1 i25 guiton
-|  ch1 i25 guiton 
+|0 ch1 
+|  ch1 
+|  ch1 
+|  ch1 
+|  ch1 
 
 (
 |0 oE5/16  ------5= 7=====7= 8=====8= 2=====2= 0=========0===== ------------ -- --

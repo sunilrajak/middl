@@ -773,7 +773,7 @@ void mf_program_change(unsigned long tick, unsigned char chan, short instr)
 
 static float rndq(int q)
 {
-  static float y2;
+  static float y2 = 0.0;
   static int   phase = 0;
   float x1, x2, w, y1;
 
@@ -828,7 +828,7 @@ static long loose(unsigned long x)
 
   if (loosew > 0) {
     l = (long)floor(0.5 + (float)loosew * rndq(looseq));
-    /*printf("Loose: %ld\n",l);*/
+    printf("Loose: %ld %lu\n",l,x);
     l += x;
     if ( l < 0) x = 0; 
     else  x = l;
@@ -845,7 +845,7 @@ static char velvar(char velocity)
     t = 1.0 + (velvarw * rndq(velvarq)) / 100.0;
     vel = (long)(((float)velocity) * t);
     /*printf("v: %d t: %f = %d \n",velocity, t,vel);*/
-    if (vel < 0) vel = 0;
+    if (vel <= 0) vel = 1;
     else if (vel > 127) vel = 127;
     velocity = (char)vel;
   }
