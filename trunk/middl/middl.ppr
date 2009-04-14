@@ -1,5 +1,5 @@
 [Config]
-Compilator.FileName=D:\0_Proj\middl\mk.bat
+Compilator.FileName=D:\99Personal\middl\mk.bat
 Compilator.PSPar=%Dir% %Input%
 Compilator.SaveAll=1
 Compilator.Capture=1
@@ -66,23 +66,25 @@ New project
 4=examples\mpad\l01c\musicpad.cgi
 5=examples\mpad\l01c\14.mp
 6=examples\mpad\l01c\17.mp
-7=..\..\Documents and Settings\Remo\Documenti\boxmuller.c
-8=examples\mpad\l01c\18.mp
-9=examples\mpad\l01c\Valentine.mp
-10=src\mf_chords.c
+7=examples\mpad\l01c\18.mp
+8=examples\mpad\l01c\Valentine.mp
+9=src\mf_chords.c
+10=src\mf_start.h
+11=src\mf_chords.h
+12=examples\mpad\l01c\sth.mp
 [Selected Project Files]
 Main=
-Selected=src\mf_chords.c
+Selected=examples\mpad\mpad.c
 [examples\mpad\mpad.c]
-TopLine=645
-Caret=54,680
-BookMark1=1,412
-BookMark2=2,223
-BookMark3=26,507
-Mark1=1,684
+TopLine=410
+Caret=1,433
+BookMark1=1,435
+BookMark2=2,227
+BookMark3=26,530
+Mark1=1,700
 [src\mf_write.c]
-TopLine=942
-Caret=5,969
+TopLine=768
+Caret=24,776
 [examples\mpad\l01c\1.mp]
 TopLine=1
 Caret=9,8
@@ -98,9 +100,6 @@ Caret=1,1
 [examples\mpad\l01c\17.mp]
 TopLine=1
 Caret=10,1
-[..\..\Documents and Settings\Remo\Documenti\boxmuller.c]
-TopLine=2
-Caret=1,1
 [examples\mpad\l01c\18.mp]
 TopLine=1
 Caret=38,1
@@ -108,5 +107,14 @@ Caret=38,1
 TopLine=1
 Caret=20,8
 [src\mf_chords.c]
-TopLine=2208
-Caret=31,2227
+TopLine=2160
+Caret=18,2162
+[src\mf_start.h]
+TopLine=1
+Caret=3,13
+[src\mf_chords.h]
+TopLine=79
+Caret=1,120
+[examples\mpad\l01c\sth.mp]
+TopLine=1
+Caret=8,11
