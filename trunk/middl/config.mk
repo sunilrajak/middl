@@ -23,6 +23,7 @@ RM=rm -f
 CP=cp -f
 CAT=cat
 LN=gcc $(LNFLAGS) -o
+CC=gcc
 
 _LIB=.a
 _OBJ=.o
@@ -42,7 +43,7 @@ DIST=$(TOP)dist
 LIBNAME=libmf$(_LIB)
 CHKLIB=$(DIST)$(S)$(LIBNAME)
 
-CFLAGS=-I. -I$(DIST) -Wall $(CCOPTS)
+CFLAGS=-I. -I$(DIST) -Wall -ansi $(CCOPTS)
 LNFLAGS=-L. -L$(DIST)  $(LNOPTS)
 
 .SUFFIXES: .c .h .o 

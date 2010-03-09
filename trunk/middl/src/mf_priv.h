@@ -46,4 +46,8 @@ extern t_sys_event  h_sys_event  ;
 
 extern char mf_note_base[];
 
+#define lowercase(x)    tolower((int)(x))
+#define charisdigit(x)  isdigit((int)(x))
+#define charisspace(x)  isspace((int)(x))
+
 #endif

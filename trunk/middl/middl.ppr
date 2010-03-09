@@ -1,11 +1,12 @@
 [Config]
-Compilator.FileName=D:\99Personal\middl\mk.bat
+Compilator.FileName=C:\d\personal\middl\mk.bat
 Compilator.PSPar=%Dir% %Input%
 Compilator.SaveAll=1
 Compilator.Capture=1
 Compilator.ParsLog=%F:%L
 Compilator.HideOutput=1
 Compilator.LogType=0
+DefaultDir=.
 DefaultCPIndex=0
 LogtoEnd=1
 DontOpen=0
@@ -16,7 +17,7 @@ ProjectFilesOnly=0
 New project
 	+midll
 		+examples
-			+mpad
+			-mpad
 				+l01c
 					examples\mpad\l01c\Valentine.mp
 					examples\mpad\l01c\sth.mp
@@ -59,62 +60,18 @@ New project
 		mk.bat
 		config.mk
 [Open project files]
-0=examples\mpad\mpad.c
-1=src\mf_write.c
-2=examples\mpad\l01c\1.mp
-3=examples\mpad\l01c\2.mp
-4=examples\mpad\l01c\musicpad.cgi
-5=examples\mpad\l01c\14.mp
-6=examples\mpad\l01c\17.mp
-7=examples\mpad\l01c\18.mp
-8=examples\mpad\l01c\Valentine.mp
-9=src\mf_chords.c
-10=src\mf_start.h
-11=src\mf_chords.h
-12=examples\mpad\l01c\sth.mp
+0=src\makefile
+1=src\mf_chords.c
+2=targets.mk
 [Selected Project Files]
 Main=
-Selected=examples\mpad\mpad.c
-[examples\mpad\mpad.c]
-TopLine=410
-Caret=1,433
-BookMark1=1,435
-BookMark2=2,227
-BookMark3=26,530
-Mark1=1,700
-[src\mf_write.c]
-TopLine=768
-Caret=24,776
-[examples\mpad\l01c\1.mp]
+Selected=src\mf_chords.c
+[src\makefile]
 TopLine=1
-Caret=9,8
-[examples\mpad\l01c\2.mp]
+Caret=20,25
+[src\mf_chords.c]
 TopLine=1
-Caret=1,4
-[examples\mpad\l01c\musicpad.cgi]
-TopLine=1623
-Caret=1,1649
-[examples\mpad\l01c\14.mp]
+Caret=22,22
+[targets.mk]
 TopLine=1
 Caret=1,1
-[examples\mpad\l01c\17.mp]
-TopLine=1
-Caret=10,1
-[examples\mpad\l01c\18.mp]
-TopLine=1
-Caret=38,1
-[examples\mpad\l01c\Valentine.mp]
-TopLine=1
-Caret=20,8
-[src\mf_chords.c]
-TopLine=2160
-Caret=18,2162
-[src\mf_start.h]
-TopLine=1
-Caret=3,13
-[src\mf_chords.h]
-TopLine=79
-Caret=1,120
-[examples\mpad\l01c\sth.mp]
-TopLine=1
-Caret=8,11

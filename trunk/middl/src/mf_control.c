@@ -14,7 +14,7 @@
 
 #include "mf.h"
 
-static unsigned char *control_names[] = {
+static char *control_names[] = {
   "\173all_notes_off"              ,
   "\170all_sound_off"              ,
   "\111attack_time"                ,
@@ -86,7 +86,7 @@ static unsigned char *control_names[] = {
   "\114vibrato_rate"               ,
 };
 
-static unsigned char *event_names[] = {
+static char *event_names[] = {
   "\040channel_prefix"     ,
   "\320channel_pressure"   ,
   "\260control_change"     ,
