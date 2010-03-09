@@ -12,7 +12,7 @@
 ** express or implied warranty.
 */
 
-#include "mf.h"
+#include "mf_priv.h"
 
 static char *instr_names[] = {
    "\025accordion",                  /*  21*/
@@ -254,7 +254,7 @@ int mf_i_cmp(const void *k, const void *b)
   int c;
 
   while (1) {
-    c = tolower(*p) - tolower(*q);
+    c = lowercase(*p) - lowercase(*q);
     if ( c != 0 || *p == '\0' || *q == '\0') break;
     p++; q++;
   }
@@ -300,9 +300,9 @@ unsigned char mf_pitchbyname(char *note)
 
   if ((pitch = mf_percbyname(note)) >= 0) return pitch;
 
-  if (tolower(note[0]) == 'z') return n_rest;
+  if (lowercase(note[0]) == 'z') return n_rest;
 
-  pitch = tolower(note[0]) - 'a';
+  pitch = lowercase(note[0]) - 'a';
 
   if (pitch < 0) pitch = 0;
   else if (pitch > 6) pitch = 6;
@@ -311,15 +311,15 @@ unsigned char mf_pitchbyname(char *note)
 
   k = 1;
   while (1) {
-    if (note[k] == '-' || tolower(note[k] == 'b')) pitch--;
+    if (note[k] == '-' || lowercase(note[k]) == 'b') pitch--;
     else if (note[k] == '+' || note[k] == '#') pitch++;
     else break;
     k++;
   }
 
-  if (isdigit(note[k])) {
+  if (charisdigit(note[k])) {
     octave = octave * 10 + (note[k++]-'0');
-    if (isdigit(note[k])) {
+    if (charisdigit(note[k])) {
       octave = octave * 10 + (note[k++]-'0');
     }
   }
@@ -340,7 +340,7 @@ long mf_durationbyname(char *name)
   int k;
   int c;
 
-  c=tolower(*name);
+  c=lowercase(*name);
   for (k=0; dur[k] && c != dur[k]; k++) ;
   if (dur[k]) {
     duration = (mf_qnote_ticks << 3) >> k;

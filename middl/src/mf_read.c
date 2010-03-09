@@ -66,7 +66,7 @@ static char *chrbuf_set(long sz)
     free(chrbuf);
     chrbuf = malloc(sz);
   }
-  return chrbuf;
+  return (char *)chrbuf;
 }
 
 static char *readmsg(long n)
@@ -84,7 +84,7 @@ static char *readmsg(long n)
       *s++ = c;
     }
   }
-  return chrbuf;
+  return (char *)chrbuf;
 }
 
 

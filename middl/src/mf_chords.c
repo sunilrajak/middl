@@ -12,7 +12,7 @@
 ** express or implied warranty.
 */
 
-#include "mf.h"
+#include "mf_priv.h"
 
 static char chords[] = {
  /*   0 "(4)"            */ 0,4,7,17,             /*  4      0       0   */
@@ -2171,24 +2171,24 @@ char *mf_getchord(char *name,char base,char octave,char transpose)
   char tmpname[20];
 
   crd_notes[0] = mf_chordend;
-  while (isspace(*name)) name++;
+  while (charisspace(*name)) name++;
   xprintf("NAME:%s ",name); 
-  if (*name=='-' || isdigit(*name)) {
+  if (*name=='-' || charisdigit(*name)) {
     do {
        crd_notes[k++] = transpose + (base+atoi(name) + 12 * octave);
        while (*name == '-') name++;
-       while (isdigit(*name)) name++;
-       while (isspace(*name) || *name == ',') name++;
-    } while ((k<16) && (*name == '-' || isdigit(*name)));
+       while (charisdigit(*name)) name++;
+       while (charisspace(*name) || *name == ',') name++;
+    } while ((k<16) && (*name == '-' || charisdigit(*name)));
   }
   else {
     pitch = -1;
-    if (tolower(*name) == 'x') {
+    if (lowercase(*name) == 'x') {
       pitch = base;
       name++;
     }
     else {
-      pitch = tolower(*name) - 'a';
+      pitch = lowercase(*name) - 'a';
       if ( 0 <= pitch && pitch <= 6) {
         pitch = mf_note_base[pitch];
         switch (*name++) {

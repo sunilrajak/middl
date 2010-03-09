@@ -1070,7 +1070,7 @@ void mf_pitch_bend(unsigned long tick, unsigned char chan, float bend)
 
 void mf_sequence_number(unsigned long tick, short seqnum)
 {
-  char buf[2];
+  unsigned char buf[2];
   buf[0] = seqnum >> 8;  buf[1] = seqnum & 0xFF;
   mf_sys_event(set_tick(tick), st_meta_event, me_sequence_number, 2, buf);
 }
@@ -1095,7 +1095,7 @@ void mf_sequence_number(unsigned long tick, short seqnum)
 */
 void mf_text_event(unsigned long tick, short type, char *str)
 {
-  mf_sys_event(set_tick(tick), st_meta_event, type & 0x0F, strlen(str), str);
+  mf_sys_event(set_tick(tick), st_meta_event, type & 0x0F, strlen(str), (unsigned char *)str);
 }
 
 /*
@@ -1119,7 +1119,7 @@ void mf_text_event(unsigned long tick, short type, char *str)
 */
 void mf_set_tempo(unsigned long tick, long tempo, short type)
 {
-  char buf[4];
+  unsigned char buf[4];
   if (tempo <= 0) tempo = 60;
   if (type == tm_bpm) {
     tempo = 60000000 / tempo;
@@ -1152,7 +1152,7 @@ void mf_set_tempo(unsigned long tick, long tempo, short type)
 */
 void mf_key_signature(unsigned long tick, char key, char minmaj)
 {
-  char buf[2];
+  unsigned char buf[2];
 
   minmaj &= 0x01;
   key >>= minmaj;
@@ -1177,17 +1177,17 @@ void mf_time_signature(unsigned long tick, char num, char den,
   mf_meter[3] = q32nd;/* he number of notated 32nds in 24 MIDI clocks.
                       ** The default value is 8. */
 
-  mf_sys_event(set_tick(tick), st_meta_event, me_time_signature , 4, mf_meter);
+  mf_sys_event(set_tick(tick), st_meta_event, me_time_signature , 4, (unsigned char *)mf_meter);
 }
 
 void mf_sysex(unsigned long tick, short type, long len, char *data)
 {
-  mf_sys_event(set_tick(tick), type, -1, len, data);
+  mf_sys_event(set_tick(tick), type, -1, len, (unsigned char *)data);
 }
 
 void mf_sequencer_specific(unsigned long tick, long len, char *data)
 {
-  mf_sys_event(set_tick(tick), st_meta_event, me_sequencer_specific, len, data);
+  mf_sys_event(set_tick(tick), st_meta_event, me_sequencer_specific, len, (unsigned char *)data);
 }
 
 /***********/
