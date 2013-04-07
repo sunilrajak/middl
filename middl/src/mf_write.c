@@ -21,12 +21,6 @@ short mf_num_tracks  ;
 short mf_format      ;
 char  mf_meter[4]    ;
 
-/* Get the number of parameters needed by a channel message
-** s is the status byte.
-*/
-static char *nparms = "\2\2\2\2\1\1\2";
-#define numparms(s) (nparms[(s & 0x70)>>4])
-
 /*
 ****t*  wrt_types/event
 * NAME
