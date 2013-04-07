@@ -15,7 +15,6 @@
 #ifndef MIDDL_PRIV_H
 #define MIDDL_PRIV_H
 
-#include "mf.h"
 #include "utl.h"
 
 
