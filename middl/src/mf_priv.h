@@ -50,4 +50,9 @@ extern char mf_note_base[];
 #define charisdigit(x)  isdigit((int)(x))
 #define charisspace(x)  isspace((int)(x))
 
+/* Get the number of parameters needed by a channel message
+** s is the status byte.
+*/
+#define mf_numparms(s) ("\2\2\2\2\1\1\2"[(s & 0x70)>>4])
+
 #endif
