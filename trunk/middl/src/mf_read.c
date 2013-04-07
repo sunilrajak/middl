@@ -12,6 +12,8 @@
 ** express or implied warranty.
 */
 
+#include "mf_read.h"
+#include "mf_control.h"
 #include "mf_priv.h"
 
 typedef struct {
@@ -280,6 +282,15 @@ int mf_read(char *fname)
 
   return ret;
 }
+
+/*************************************************************/
+
+#define hndl_error        0
+#define hndl_writetrack   1
+#define hndl_header       2
+#define hndl_track        3
+#define hndl_midi_event   4
+#define hndl_sys_event    5
 
 int mf_null_handler() {return 0;}
 

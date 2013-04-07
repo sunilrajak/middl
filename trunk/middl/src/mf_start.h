@@ -22,28 +22,6 @@
 #include <strings.h>
 #include <string.h>
 
-
-/* == Handlers  <#hndl> */
-
-#define hndl_error        0
-#define hndl_writetrack   1
-#define hndl_header       2
-#define hndl_track        3
-#define hndl_midi_event   4
-#define hndl_sys_event    5
-
-#define hndl_count        6
-
-typedef int (*mf_hndl)();
-typedef mf_hndl mf_handlers[hndl_count];
-
-extern mf_handlers dmp_handlers;
-
-int mf_null_handler();
-
-void mf_sethandlers (mf_handlers new_handlers);
-void mf_gethandlers (mf_handlers cur_handlers);
-
 long mf_durationbyname(char *name);
 
 extern short mf_qnote_ticks ;
