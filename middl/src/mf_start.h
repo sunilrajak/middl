@@ -32,7 +32,6 @@ extern char  mf_meter[4];
 extern unsigned long mf_curtick;
 extern unsigned long mf_endtick;
 
-int mf_read(char *fname);
 
 int mf_midi_event(unsigned long tick, short type, short chan,
                                                    short data1, short data2);
