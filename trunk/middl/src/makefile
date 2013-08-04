@@ -15,7 +15,7 @@ include $(TOP)config.mk
 
 HDRS= mf_start.h mf_instruments.h mf_chords.h mf_control.h mf_end.h
 LIBOBJ = mf_instruments$(_OBJ) mf_chords$(_OBJ) mf_control$(_OBJ) \
-         mf_handlers$(_OBJ) mf_write$(_OBJ) mf_read$(_OBJ)
+         mf_write$(_OBJ) mf_read$(_OBJ)
 
 $(LIBNAME) : $(DIST)$(S)mf.h $(LIBOBJ) 
 	$(AR) $@ $(LIBOBJ)

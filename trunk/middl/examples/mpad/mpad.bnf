@@ -1,9 +1,9 @@
 
-<mpfile> ::= <global>+ <trk>+
+<mpfile> ::= <global>* <trk>+
 
-<global> ::=  "meter" <meter> | "tempo" \d+ | "ppqn" \d+ | "resolution" |
-             "duty" | "velocity" | "globaloose" |
-             "globalvelvar" | "globalguiton" | "key"
+<global> ::=  "meter" <meter> | "tempo" <bpm> | <ppqn> \d+ |
+              "duty" <percent>| "velocity" <7bit> | "globaloose" \d+ "," \d+ |
+             "globalvelvar" \d+ "," \d+ | "globalguiton" | "key" <key>
 
 <trk> ::= '|' \d? <event>+
 
@@ -33,5 +33,10 @@
 
 
 <meter> ::= \N ('/' \N)? | "none" | '(' \N ('+' \N)* ')' 
+<ppqn> ::= "ppqn" | "resolution"
+<bpm>  ::= "0" | "1" | "2" | "3" | \d\d+
 
+<percent> ::= 0..100
+<7bit> := 0..127
 
+<key> ::= [a-g]<accid>? ("min" | "maj")?
