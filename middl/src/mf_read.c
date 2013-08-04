@@ -301,6 +301,7 @@ t_track      h_track      = (t_track     )mf_null_handler;
 t_midi_event h_midi_event = (t_midi_event)mf_null_handler;
 t_sys_event  h_sys_event  = (t_sys_event )mf_null_handler;
 
+#define DMP_HANDLERS
 #ifdef DMP_HANDLERS
 
 /* == Demo handlers
@@ -399,7 +400,7 @@ static int mf_dmp_track (short eot, short tracknum, unsigned long tracklen)
 *      chan  - the channel on which the event occurs. Channels are
 *              numbered from 1 to 16.
 *      data1 - the first (or only) data byte
-*      data2 - the second data byte. If it's <0 has to be ignored.
+*      data2 - the second data byte. If it's < 0  is to be ignored.
 *
 *  RESULT
 *    error - non-zero on failure
@@ -449,8 +450,12 @@ static int mf_dmp_sys_event(unsigned long tick, short type, short aux,
   printf("%8ld %02X ", tick, type);
   if (aux >= 0) printf("%02X ", aux);
   printf("%04lX ", (unsigned long)len);
-  while (len-- > 0)
-    printf("%02X", *data++);
+  if (type == 0xFF && (0x01 <= aux && aux <= 0x07)) {
+    while (len-- > 0) printf("%c", *data++);
+  }
+  else {
+    while (len-- > 0) printf("%02X", *data++);
+  }
   printf("\n");
 
   return 0;
