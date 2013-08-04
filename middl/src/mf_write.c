@@ -417,7 +417,7 @@ int mf_midi_event(unsigned long tick, short type, short chan,
   status = type | (chan > 0 ? (chan - 1) & 0x0F : 0);
   b_write8(status);
   b_write7(data1);
-  if (numparms(status) == 2) b_write7(data2);
+  if (mf_numparms(status) == 2) b_write7(data2);
   end_event();
 
   return 0;

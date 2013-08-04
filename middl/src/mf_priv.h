@@ -15,8 +15,8 @@
 #ifndef MIDDL_PRIV_H
 #define MIDDL_PRIV_H
 
-#include "utl.h"
-
+#include "ctype.h"
+#include "mf.h"
 
 #define MThd 0x4d546864
 #define MTrk 0x4d54726b
@@ -53,5 +53,30 @@ extern char mf_note_base[];
 ** s is the status byte.
 */
 #define mf_numparms(s) ("\2\2\2\2\1\1\2"[(s & 0x70)>>4])
+
+/* Debugging macros */
+#ifdef DEBUG
+#define dbgmsg(...) ((fflush(stdout), fprintf(stderr,"# "),\
+                      fprintf(stderr,__VA_ARGS__), fflush(stderr)))
+
+#define dbgdmp(p,l) do { unsigned char *q=p; int k=l;\
+                      fflush(stdout); fprintf(stderr,"# ");\
+                      while (k-- > 0) fprintf(stderr,"%02X ",*q++);\
+                      fprintf(stderr,"\n"); fflush(stderr);\
+                    } while(0)
+
+#define dbgif(x,y) if x y
+
+#else
+
+#define dbgmsg(...)
+#define dbgdmp(p,l)
+#define dbgif(x,y)
+
+#endif /* DEBUG */
+
+#define _dbgmsg(...)
+#define _dbgdmp(p,l)
+#define _dbgif(x,y)
 
 #endif

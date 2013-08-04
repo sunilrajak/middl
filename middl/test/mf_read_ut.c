@@ -15,12 +15,14 @@
 
 #define UTL_UNITTEST
 
-#include "msq_read.c"
+#include "../src/utl.h"
+#include "../src/mf_read.h"
 
 int main(int argc, char *argv[])
 {
+
   if (argc > 1) {
-    mf_sethandlers(dmp_handlers);
+    mf_sethandlers(mf_dmp_handlers);
     mf_read(argv[1]);
   }
 
