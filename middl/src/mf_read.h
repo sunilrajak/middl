@@ -27,4 +27,6 @@ int mf_null_handler();
 void mf_sethandlers (mf_handlers new_handlers);
 void mf_gethandlers (mf_handlers cur_handlers);
 
+int mf_read(char *fname);
+
 #endif
