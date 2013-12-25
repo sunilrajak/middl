@@ -374,8 +374,7 @@ static int mf_dmp_track (short eot, short tracknum, unsigned long tracklen)
   return 0;
 }
 
-/*
-****f*  handlers/mf_dmp_midi_event
+/****f*  handlers/mf_dmp_midi_event
 *  NAME
 *    mf_dmp_midi_event
 *
