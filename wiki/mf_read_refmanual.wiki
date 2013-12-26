@@ -2,7 +2,7 @@
 
 = Reading midifiles =
 
-To read a midifile you need to define 5 functions and pass them to the mf_read() function.
+To read a midifile you need to define 5 handler functions and pass them to the mf_read() function.
 
 {{{
 
@@ -16,7 +16,7 @@ int mf_read( char          *fname      ,  // Midi file to read
 
 }}}
 
-The handlers will have to have the following prototypes:
+The handler functions will have to have the following prototypes:
 {{{
 int fn_error    (short err, char *msg);
 int fn_header   (short type, short ntracks, short division);
@@ -26,6 +26,7 @@ int fn_sys_evt  (unsigned long delta, short type, short aux, long len, unsigned 
 }}}
 
 *Example* Dump a midi file
+
 This is a simple way of creating an ASCII representation of a midi file.
 
 {{{
