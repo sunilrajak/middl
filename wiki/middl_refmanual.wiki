@@ -18,13 +18,22 @@ int mf_read( char          *fname      ,  // Midi file to read
 
 {{{
 int fn_error    (short err, char *msg);
-int fn_header   (short type, short ntracks, short division);
-int fn_track    (short eot, short tracknum, unsigned long tracklen);
-int fn_midi_evt (unsigned long delta, short type, short chan,
-                                              short data1, short data2);
-int fn_sys_evt  (unsigned long delta, short type, short aux,
-                                              long len, unsigned char *data);
+}}}
 
+{{{
+int fn_header   (short type, short ntracks, short division);
+}}}
+
+{{{
+int fn_track    (short eot, short tracknum, unsigned long tracklen);
+}}}
+
+{{{
+int fn_midi_evt (unsigned long delta, short type, short chan, short data1, short data2);
+}}}
+
+{{{
+int fn_sys_evt  (unsigned long delta, short type, short aux, long len, unsigned char *data);
 }}}
 
 
