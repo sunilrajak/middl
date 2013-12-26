@@ -1,4 +1,5 @@
 #summary Middl Reference Manual
+#labels Featured
 
 = Reading midifiles =
 
