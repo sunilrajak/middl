@@ -1,0 +1,20 @@
+#summary Middl Reference Manual
+
+= Reading midifiles =
+
+To read a midifile use the function mf_read()
+
+{{{
+
+int mf_read( char          *fname      , mf_fn_error   fn_error   ,
+             mf_fn_header   fn_header  , mf_fn_track   fn_track   ,
+             mf_fn_midi_evt fn_midi_evt, mf_fn_sys_evt fn_sys_evt  )
+
+}}}
+
+= Details =
+
+Add your content here.  Format your content with:
+  * Text in *bold* or _italic_
+  * Headings, paragraphs, and lists
+  * Automatic links to other wiki pages
