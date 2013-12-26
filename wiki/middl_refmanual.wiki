@@ -6,9 +6,13 @@ To read a midifile use the function mf_read()
 
 {{{
 
-int mf_read( char          *fname      , mf_fn_error   fn_error   ,
-             mf_fn_header   fn_header  , mf_fn_track   fn_track   ,
-             mf_fn_midi_evt fn_midi_evt, mf_fn_sys_evt fn_sys_evt  )
+int mf_read( char          *fname      ,  // Midi file to read
+             mf_fn_error    fn_error   ,  // called on error
+             mf_fn_header   fn_header  ,  // called when the header is read
+             mf_fn_track    fn_track   ,  // called when a track starts or ends
+             mf_fn_midi_evt fn_midi_evt,  // called on each midi event
+             mf_fn_sys_evt  fn_sys_evt    // called on each sys event
+           )
 
 }}}
 
