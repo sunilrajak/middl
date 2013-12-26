@@ -1,4 +1,5 @@
 #summary Reference for writing midi files
+#labels Featured
 = Writing Midi files =
 
 To create a midifile, the following functions are available:
