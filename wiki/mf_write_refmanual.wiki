@@ -1,13 +1,25 @@
 #summary Reference for writing midi files
 = Writing Midi files =
 
-To create a midifile, first a `mf_writer` must be created with:
+To create a midifile, the following functions are available:
 
 {{{
 mf_writer *mf_new (char *fname,short format, short ntracks, short division);
+int mf_close (mf_writer *mw);
+
+int mf_track_start (mf_writer *mw);
+int mf_track_end   (mf_writer *mw);
+
+int mf_midi_evt (mf_writer *mw, unsigned long delta, short type, short chan,
+                                                  short data1, short data2);
+int mf_sys_evt  (mf_writer *mw, unsigned long delta, short type, short aux,
+                                                  long len, unsigned char *data);
+                                                  
+int mf_text_evt (mf_writer *mw, unsigned long delta, short type, char *txt);
 
 }}}
 
+*Example*
 
 {{{
 int createmidifile(char *fname)
