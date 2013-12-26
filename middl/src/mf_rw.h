@@ -12,7 +12,32 @@
 ** express or implied warranty.
 */
 
+#ifndef MF_RW_H
+#define MF_RW_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <strings.h>             
+             
+typedef int (*mf_fn_error   ) (short err, char *msg);
+typedef int (*mf_fn_header  ) (short type, short ntracks, short division);
+typedef int (*mf_fn_track   ) (short eot, short tracknum, unsigned long tracklen);
+typedef int (*mf_fn_midi_evt) (unsigned long delta, short type, short chan,
+                                              short data1, short data2);
+typedef int (*mf_fn_sys_evt ) (unsigned long delta, short type, short aux,
+                                              long len, unsigned char *data);
+
+
+int mf_read( char           *fname       ,
+             mf_fn_error     fn_error    ,
+             mf_fn_header    fn_header   ,
+             mf_fn_track     fn_track    ,
+             mf_fn_midi_evt  fn_midi_evt ,
+             mf_fn_sys_evt   fn_sys_evt 
+           );
+
+           
 #define cc_bank_select                     0x00
 #define cc_modulation_wheel                0x01
 #define cc_breath_controller               0x02
@@ -102,7 +127,8 @@
 #define st_meta_event              0xFF
 
 #define me_sequence_number         0x00
-#define me_text_event              0x01
+
+#define me_text                    0x01
 #define me_copyright_notice        0x02
 #define me_sequence_name           0x03
 #define me_track_name              0x03
@@ -112,6 +138,7 @@
 #define me_cue_point               0x07
 #define me_device_name             0x08
 #define me_program_name            0x09
+
 #define me_end_of_track            0x2f
 #define me_set_tempo               0x51
 #define me_smpte_offset            0x54
@@ -121,51 +148,104 @@
 #define me_channel_prefix          0x20
 #define me_port_prefix             0x21
 
-#define mf_text(t,s)             mf_text_event(t, me_text_event,s)
-#define mf_copyright_notice(t,s) mf_text_event(t, me_copyright_notice,s)
-#define mf_sequence_name(t,s)    mf_text_event(t, me_sequence_name,s)
-#define mf_track_name(t,s)       mf_text_event(t, me_track_name,s)
-#define mf_instrument_name(t,s)  mf_text_event(t, me_instrument_name,s)
-#define mf_marker(t,s)           mf_text_event(t, me_marker,s)
-#define mf_cue_point(t,s)        mf_text_event(t, me_cue_point,s)
-#define mf_device_name(t,s)      mf_text_event(t, me_device_name,s)
-#define mf_program_name(t,s)     mf_text_event(t, me_program_name,s)
-#define mf_lyric(t,d,s)         (mf_text_event(t, me_lyric,s), mf_tick(mf_curtickt+d))
+
+/* Debugging macros */
+#ifdef DEBUG
+#define dbgmsg(...) ((fflush(stdout), fprintf(stderr,"# "),\
+                      fprintf(stderr,__VA_ARGS__), fflush(stderr)))
+
+#define dbgdmp(p,l) do { unsigned char *q=p; int k=l;\
+                      fflush(stdout); fprintf(stderr,"# ");\
+                      while (k-- > 0) fprintf(stderr,"%02X ",*q++);\
+                      fprintf(stderr,"\n"); fflush(stderr);\
+                    } while(0)
+
+#define dbgif(x,y) if x y
+
+#else
+
+#define dbgmsg(...)
+#define dbgdmp(p,l)
+#define dbgif(x,y)
+
+#endif /* DEBUG */
+
+#define _dbgmsg(...)
+#define _dbgdmp(p,l)
+#define _dbgif(x,y)
+
+#define utl_assum1(e,l) typedef struct {int utl_assumption[(e)?1:-1];} utl_assumption_##l
+#define utl_assum0(e,l) utl_assum1(e,l)
+#define utlAssume(e)    utl_assum0(e,__LINE__)
 
 
-/* Key signatures encoding:
-**    min  maj
-**    sxxx tyyy
-**    \\_/ \\_/
-**     \ \  \ \__ # of accidentals
-**      \ \  \___ 0: sharp 1: flat
-**       \ \_____ # of accidentals
-**        \______ 0: sharp 1: flat
+/********************************************/
+
+
+typedef struct {
+  FILE *file;
+  unsigned long len_pos; /* where to write (in the file) the track len */
+  unsigned long trk_len; /* Total track length */
+  short trk_cnt;
+  short trk_max;
+  short trk_in; /* 0: before track 1: in track */
+  short chan;  /* current channel  (0-15) */  
+} mf_writer;
+
+mf_writer *mf_new (char *fname,short format, short ntracks, short division);
+int mf_close (mf_writer *mw);
+
+int mf_track_start (mf_writer *mw);
+int mf_track_end   (mf_writer *mw);
+
+int mf_midi_evt (mf_writer *mw, unsigned long delta, short type, short chan,
+                                                  short data1, short data2);
+int mf_sys_evt  (mf_writer *mw, unsigned long delta, short type, short aux,
+                                                  long len, unsigned char *data);
+                                                  
+int mf_text_evt (mf_writer *mw, unsigned long delta, short type, char *txt);
+
+
+#define mf_note_off(m,d,c,p)   mf_midi_evt(m, d, st_note_off, c, p, 0)
+#define mf_note_on(m,d,c,p,v)  mf_midi_evt(m, d, st_note_on , c, p, v)
+
+#define mf_key_pressure(m,d,c,p,r)    mf_midi_evt(m, d, st_key_pressure, c, p, r)
+#define mf_channel_pressure(m,d,c,r)  mf_midi_evt(m, d, st_channel_pressure, c, r, 0)
+
+#define mf_program_change(m,d,c,i)    mf_midi_evt(m, d, st_program_change, c, i, 0)
+
+#define mf_control_change(m,d,c,ctr,v)    mf_midi_evt(m, d, st_control_change, c, ctr, v)
+
+
+int mf_pitch_bend(mf_writer *mw, unsigned long delta, unsigned char chan, short bend);
+
+int mf_set_tempo(mf_writer *mw, unsigned long delta, long tempo);
+
+#define mf_set_bpm(m,d,t) mf_set_tempo(m,d, (60000000L / (long)(t)))
+
+/*
+
+void mf_sequence_number(unsigned long delta, short seqnum);
+
+void mf_key_signature(unsigned long delta, char key, char minmaj);
+void mf_time_signature(unsigned long delta, char num, char den,
+                                                    char clks, char q32nd);
+void mf_sysex(unsigned long delta, short type, long len, char *data);
+void mf_sequencer_specific(unsigned long delta, long len, char *data);
 */
-#define ks_min 1
-#define ks_maj 0
-#define ks_A        0x03
-#define ks_Asharp   0x70
-#define ks_Aflat    0xFC
-#define ks_B        0x25
-#define ks_Bflat    0xDA
-#define ks_C        0xB0
-#define ks_Csharp   0x47
-#define ks_Cflat    0x0F
-#define ks_D        0x92
-#define ks_Dsharp   0x60
-#define ks_Dflat    0xDD
-#define ks_E        0x14
-#define ks_Eflat    0xEB
-#define ks_F        0xC9
-#define ks_Fsharp   0x36
-#define ks_G        0xA1
-#define ks_Gsharp   0x50
-#define ks_Gflat    0x0E
 
-#define tm_msec  0
-#define tm_bpm   1
 
-int mf_eventbyname(char *name);
-int mf_ctrlbyname(char *name);
+#define mf_text(m,d,t)              mf_text_evt(m, d, 0x01 ,t) 
+#define mf_copyright_notice(m,d,t)  mf_text_evt(m, d, 0x02 ,t) 
+#define mf_sequence_name(m,d,t)     mf_text_evt(m, d, 0x03 ,t) 
+#define mf_track_name(m,d,t)        mf_text_evt(m, d, 0x03 ,t) 
+#define mf_instrument_name(m,d,t)   mf_text_evt(m, d, 0x04 ,t) 
+#define mf_lyric(m,d,t)             mf_text_evt(m, d, 0x05 ,t) 
+#define mf_marker(m,d,t)            mf_text_evt(m, d, 0x06 ,t) 
+#define mf_cue_point(m,d,t)         mf_text_evt(m, d, 0x07 ,t) 
+#define mf_device_name(m,d,t)       mf_text_evt(m, d, 0x08 ,t) 
+#define mf_program_name(m,d,t)      mf_text_evt(m, d, 0x09 ,t) 
 
+
+
+#endif
