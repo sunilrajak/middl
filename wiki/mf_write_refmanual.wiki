@@ -5,7 +5,7 @@
 To create a midifile, the following functions are available:
 
 {{{
-mf_writer *mf_new (char *fname,short format, short ntracks, short division);
+mf_writer *mf_new (char *fname, short division);
 int mf_close (mf_writer *mw);
 
 int mf_track_start (mf_writer *mw);
