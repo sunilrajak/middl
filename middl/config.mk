@@ -39,12 +39,11 @@ endif
 
 S=/
 
-DIST=$(TOP)dist
 LIBNAME=libmf$(_LIB)
 CHKLIB=$(DIST)$(S)$(LIBNAME)
 
-CFLAGS=-I. -I$(DIST) -Wall -ansi $(CCOPTS)
-LNFLAGS=-L. -L$(DIST)  $(LNOPTS)
+CFLAGS=-I. -Wall -ansi $(CCOPTS)
+LNFLAGS=-L.  $(LNOPTS)
 
 .SUFFIXES: .c .h .o 
 
