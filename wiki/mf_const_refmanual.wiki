@@ -1,6 +1,5 @@
-#summary One-sentence summary of this page.
+#summary Constants for the mf functions.
 #labels Featured
-
 = Constants =
 
 These are the constants that can be passed as the `type` parameter to the `mf_midi_evt()` and `mf_seq_evt()` functions:
