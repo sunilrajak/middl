@@ -28,11 +28,11 @@ typedef struct {
 #define MThd 0x4d546864
 #define MTrk 0x4d54726b
 
-/* Get the number of parameters needed by a channel message
+/* Get the number of parameters needed by a channel message.
 ** s is the status byte.
 */
-const static char *numparms = "\2\2\2\2\1\1\2";
-#define mf_numparms(s) (numparms[((s) & 0x70)>>4])
+
+int mf_numparms(int s)  { return ("\2\2\2\2\1\1\2"[((s) & 0x70)>>4]); }
 
 /********************************************************************/
 
@@ -279,8 +279,8 @@ static int mf_dmp_sys_evt(unsigned long tick, short type, short aux,
   if (aux >= 0) printf("%02X ", aux);
   printf("%04lX ", (unsigned long)len);
   type = (type == 0xFF && (0x01 <= aux && aux <= 0x09));
-  if (type) {  while (len-- > 0) printf("%c", *data++);   }  // ASCII
-  else      {  while (len-- > 0) printf("%02X", *data++); }  // DATA
+  if (type) {  while (len-- > 0) printf("%c", *data++);   }  /* ASCII */
+  else      {  while (len-- > 0) printf("%02X", *data++); }  /* DATA */
   printf("\n");
 
   return 0;
@@ -393,10 +393,8 @@ static void f_writevar(mf_writer *mw, unsigned long n)
   }
 }
 
-mf_writer *mf_new(char *fname, short format, short ntracks, short division)
+mf_writer *mf_new(char *fname, short division)
 {
-  short i;
-  int error = 0;
   mf_writer *mw = NULL;
    
   mw = malloc(sizeof(mf_writer));
@@ -406,20 +404,17 @@ mf_writer *mf_new(char *fname, short format, short ntracks, short division)
   
   if (!mw->file) {  free (mw); return NULL; }
 
-  if (format == 0) ntracks = 1;
-
   mw->len_pos = 0;
   mw->trk_len = 0;
   mw->trk_cnt = 0;
   mw->trk_in  = 0;
-  mw->chan    = 0;
-  mw->trk_max = ntracks;
+  mw->division  = division;
   
-  /* Write Header chunk */
+  /* Write Header chunk (to be rewrite at the end) */
   f_write32(mw, MThd);
   f_write32(mw, 6);
-  f_write16(mw, format);
-  f_write16(mw, ntracks);
+  f_write16(mw, 0);
+  f_write16(mw, 1);
   f_write16(mw, division);
 
   return mw;
@@ -429,17 +424,15 @@ int mf_track_start (mf_writer *mw)
 {
   if (!mw || !mw->file || mw->trk_in) { return 309; }
 
-  if (mw->trk_cnt == mw->trk_max) { return 310; }
   
   mw->trk_cnt++;
   mw->trk_in  = 1;
-  mw->trk_cnt = 0;
   mw->chan    = 0;
   
   f_write32(mw, MTrk);
-  mw->len_pos = ftell(mw->file);
   
-  if (mw->len_pos <  0) { return 301; }
+  /* Save current position for later */
+  if ((mw->len_pos = ftell(mw->file)) <  0) { return 301; }
 
   f_write32(mw, 0);  /* just a place-holder for now */
 
@@ -478,7 +471,7 @@ int mf_midi_evt (mf_writer *mw, unsigned long delta, short type, short chan,
   
   if (st == st_system_exclusive)  {return 318; }  /* No sysex accepted here! */
   
-  if (st == st_note_on && data2 == 0) st = st_note_off
+  if (st == st_note_on && data2 == 0) st = st_note_off;
   
   f_writevar(mw, delta);
   f_write8(mw, st | (chan & 0x0F));
@@ -512,9 +505,27 @@ int mf_text_evt(mf_writer *mw, unsigned long delta, short type, char *str)
 int mf_close (mf_writer *mw)
 {
   int ret = 0;
-  if (!mw || !mw->file) { return 339; }
+  int format = 0;
+  unsigned long pos_cur;
+
+  if (!mw || !mw->file) { return 399; }
   
   if (mw->trk_in) ret = mf_track_end(mw);
+  
+  if (mw->trk_cnt > 1) format = 1;
+
+  if ((pos_cur = ftell(mw->file)) <  0) {  return 392; }
+
+  if (fseek(mw->file, 0, SEEK_SET) < 0) {  return 393; }
+ 
+  f_write32(mw, MThd);
+  f_write32(mw, 6);
+  f_write16(mw, format);
+  f_write16(mw, mw->trk_cnt);
+  f_write16(mw, mw->division);
+  
+  if (fseek(mw->file, pos_cur, SEEK_SET) < 0) { return 394; }
+
   fclose(mw->file);
   free(mw);
   
@@ -522,16 +533,14 @@ int mf_close (mf_writer *mw)
 }
 
 int mf_pitch_bend(mf_writer *mw, unsigned long delta, unsigned char chan, short bend)
-{
-  
-  /* bend is in the range  -8192 .. 8191 */
+{/* bend is in the range  -8192 .. 8191 */
   
   if (bend < -8192) bend = -8192;
   if (bend >  8191) bend =  8191;
 
   bend += 8192;  
 
-  return mf_midi_evt(mw, delta, st_pitch_bend, set_channel(chan), bend, bend  >> 7);
+  return mf_midi_evt(mw, delta, st_pitch_bend, chan, bend, bend  >> 7);
 }
 
 int mf_set_tempo(mf_writer *mw, unsigned long delta, long tempo)
@@ -545,10 +554,18 @@ int mf_set_tempo(mf_writer *mw, unsigned long delta, long tempo)
   return mf_sys_evt(mw, delta, st_meta_event, me_set_tempo, 3, buf);
 }
 
+int mf_set_keysig(mf_writer *mw, unsigned long delta, short acc, short min)
+{
+  unsigned char buf[4];
+  
+  buf[0] = (unsigned char)(acc & 0xFF);
+  buf[1] = (unsigned char)(min & 0x01);
+  return mf_sys_evt(mw, delta, st_meta_event, me_key_signature, 2, buf);
+}
+
 
 /** **/
                                                    
-
 
 #ifdef MF_WRITE_TEST
 
@@ -557,7 +574,7 @@ int main(int argc, char *argv[])
    mf_writer *m;
    int ret = 999;
    
-   if ((m = mf_new("xx.mid",1,2,192))) {  ret = 0; }
+   if ((m = mf_new("xx.mid",192))) {  ret = 0; }
    
    if (!ret)  {ret = mf_track_start(m);}
    if (!ret)  {ret = mf_text(m, 0, "First");}

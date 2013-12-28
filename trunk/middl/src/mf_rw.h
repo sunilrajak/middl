@@ -1,5 +1,5 @@
 /*
-**  (C) 2008 by Remo Dentato (rdentato@users.sourceforge.net)
+**  (C) Remo Dentato (rdentato@gmail.com)
 **
 ** Permission to use, copy, modify and distribute this code and
 ** its documentation for any purpose is hereby granted without
@@ -186,13 +186,13 @@ typedef struct {
   FILE *file;
   unsigned long len_pos; /* where to write (in the file) the track len */
   unsigned long trk_len; /* Total track length */
-  short trk_cnt;
-  short trk_max;
-  short trk_in; /* 0: before track 1: in track */
-  short chan;  /* current channel  (0-15) */  
+  short trk_cnt;         /* How many tracks? */
+  short division;
+  short trk_in;          /* 0: before track 1: in track */
+  short chan;            /* current channel  (0-15) */  
 } mf_writer;
 
-mf_writer *mf_new (char *fname,short format, short ntracks, short division);
+mf_writer *mf_new (char *fname, short division);
 int mf_close (mf_writer *mw);
 
 int mf_track_start (mf_writer *mw);
@@ -223,29 +223,31 @@ int mf_set_tempo(mf_writer *mw, unsigned long delta, long tempo);
 
 #define mf_set_bpm(m,d,t) mf_set_tempo(m,d, (60000000L / (long)(t)))
 
+int mf_set_keysig(mf_writer *mw, unsigned long delta, short accid, short min);
+
 /*
 
 void mf_sequence_number(unsigned long delta, short seqnum);
 
-void mf_key_signature(unsigned long delta, char key, char minmaj);
 void mf_time_signature(unsigned long delta, char num, char den,
                                                     char clks, char q32nd);
 void mf_sysex(unsigned long delta, short type, long len, char *data);
 void mf_sequencer_specific(unsigned long delta, long len, char *data);
+
 */
 
 
-#define mf_text(m,d,t)              mf_text_evt(m, d, 0x01 ,t) 
-#define mf_copyright_notice(m,d,t)  mf_text_evt(m, d, 0x02 ,t) 
-#define mf_sequence_name(m,d,t)     mf_text_evt(m, d, 0x03 ,t) 
-#define mf_track_name(m,d,t)        mf_text_evt(m, d, 0x03 ,t) 
-#define mf_instrument_name(m,d,t)   mf_text_evt(m, d, 0x04 ,t) 
-#define mf_lyric(m,d,t)             mf_text_evt(m, d, 0x05 ,t) 
-#define mf_marker(m,d,t)            mf_text_evt(m, d, 0x06 ,t) 
-#define mf_cue_point(m,d,t)         mf_text_evt(m, d, 0x07 ,t) 
-#define mf_device_name(m,d,t)       mf_text_evt(m, d, 0x08 ,t) 
-#define mf_program_name(m,d,t)      mf_text_evt(m, d, 0x09 ,t) 
+#define mf_text(m,d,t)              mf_text_evt(m, d, me_text             ,t) 
+#define mf_copyright_notice(m,d,t)  mf_text_evt(m, d, me_copyright_notice ,t) 
+#define mf_sequence_name(m,d,t)     mf_text_evt(m, d, me_sequence_name    ,t) 
+#define mf_track_name(m,d,t)        mf_text_evt(m, d, me_track_name       ,t) 
+#define mf_instrument_name(m,d,t)   mf_text_evt(m, d, me_instrument_name  ,t) 
+#define mf_lyric(m,d,t)             mf_text_evt(m, d, me_lyric            ,t) 
+#define mf_marker(m,d,t)            mf_text_evt(m, d, me_marker           ,t) 
+#define mf_cue_point(m,d,t)         mf_text_evt(m, d, me_cue_point        ,t) 
+#define mf_device_name(m,d,t)       mf_text_evt(m, d, me_device_name      ,t) 
+#define mf_program_name(m,d,t)      mf_text_evt(m, d, me_program_name     ,t) 
 
-
+int mf_numparms(int s);
 
 #endif
