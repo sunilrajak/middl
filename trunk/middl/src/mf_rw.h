@@ -180,9 +180,11 @@ int mf_read( char           *fname       ,
 
 
 /********************************************/
+#define mf_type_file 1
 
 
 typedef struct {
+  unsigned short type;
   FILE *file;
   unsigned long len_pos; /* where to write (in the file) the track len */
   unsigned long trk_len; /* Total track length */
