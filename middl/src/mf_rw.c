@@ -289,7 +289,7 @@ static int mf_dmp_sys_evt(unsigned long tick, short type, short aux,
 static int mf_dmp_error(short err, char *msg)
 {
   if (msg == NULL) msg = "";
-  fprintf(stderr, "Error %d - %s\n", err, msg);
+  fprintf(stderr, "Error %03d - %s\n", err, msg);
   return err;
 };
 
@@ -404,6 +404,7 @@ mf_writer *mf_new(char *fname, short division)
   
   if (!mw->file) {  free (mw); return NULL; }
 
+  mw->type    = mf_type_file;
   mw->len_pos = 0;
   mw->trk_len = 0;
   mw->trk_cnt = 0;
@@ -422,8 +423,9 @@ mf_writer *mf_new(char *fname, short division)
 
 int mf_track_start (mf_writer *mw)
 {
-  if (!mw || !mw->file || mw->trk_in) { return 309; }
+  if (!mw || !mw->file ) { return 309; }
 
+  if (mw->trk_in) mf_track_end(mw);
   
   mw->trk_cnt++;
   mw->trk_in  = 1;

@@ -18,22 +18,26 @@
 #define MF_SEQ_BUF_STEP  (1024*128)
 #define MF_SEQ_EVT_STEP  (1024)
 
-typedef struct {
+#define mf_type_seq 2
 
+typedef union {
+  unsigned long  l;
+  unsigned char *p;
+} mf_evt;
+
+typedef struct {
+  unsigned short type;
   unsigned char *buf;
   unsigned long  buf_cnt;
   unsigned long  buf_max;
   
-  unsigned long *evt;
+  mf_evt *evt;
   unsigned long  evt_cnt;
   unsigned long  evt_max;
   
   char  *fname;
-  short  format;
   short  division;
-  short  ntracks;
   short  curtrack;
-  
 } mf_seq;  
 
 mf_seq *mf_seq_new (char *fname, short division);
@@ -42,3 +46,4 @@ int mf_seq_set_track(mf_seq *ms, int track);
 int mf_seq_get_track(mf_seq *ms, int track);
 int mf_seq_evt (mf_seq *ms, unsigned long tick, short type, short chan, short data1, short data2);
 int mf_seq_sys(mf_seq *ms, unsigned long tick, short type, short aux, long len, unsigned char *data);
+int mf_seq_text(mf_seq *ms, unsigned long tick, short type, char *txt);
