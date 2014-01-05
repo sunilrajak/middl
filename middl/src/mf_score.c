@@ -328,7 +328,7 @@ static void getnote(trk_data *trks,int play)
      n = getnum(trks) + trks->note[trks->track];
      istmp = 1;
   }
-  else if (c == 'x' || c == 'X') {
+  else if (c == 'X' || c == 'X') {
     n = getnum(trks) + trks->note[trks->track];
     istmp = (c == 'x');
   }
@@ -488,6 +488,7 @@ static setchan(trk_data *trks)
   n = getnum(trks);
   if (n>0) n--;
   trks->chan[trks->track] = n & 0x0F;  
+  dbgmsg("CHAN: %d\n",n);
 }
 
 static void setmeter(trk_data *trks)
@@ -623,8 +624,16 @@ static void ctrl(trk_data *trks)
   
   c = *(trks->ptr++);
   p = trks->ptr;
+  c = *p;
+
+  _dbgmsg("CTRL: [%c]\n",c);
   
-       if (strncmp(p,"meter:",6) == 0)    { setmeter(trks); }
+  if ( '0' <= c && c <= '9') {
+    trks->trgt[c-'0'] = trks->tick[trks->track];
+    _dbgmsg("TARGET: %d\n", trks->tick[trks->track]);
+    trks->ptr++;
+  }
+  else if (strncmp(p,"meter:",6) == 0)    { setmeter(trks); }
   else if (strncmp(p,"key:"  ,4) == 0)    { setkey(trks); } 
   else if (strncmp(p,"bpm:"  ,4) == 0)    { setbpm(trks); } 
   else if (strncmp(p,"pan:"  ,4) == 0)    {  } 
@@ -639,9 +648,9 @@ static void defvalue(trk_data *trks)
 {
   unsigned char c;
    
-  c = *(trks->ptr++);
-  c = *(trks->ptr++);
-
+  c = *(trks->ptr++); /* skip ':' */
+  c = *(trks->ptr);
+  _dbgmsg("DEFV: [%c]\n",c);
   if (!c || isspace(c)) return;
   if ( ('A' <= c && c <= 'G') || ('a' <= c && c <= 'g') )
     getnote(trks,0);
@@ -693,8 +702,7 @@ static void parse(trk_data *trks)
                                        { rest(trks);     }
      else if ( c == '|' )              { chgtrack(trks); }
      else if ( c == '<' )              { back(trks); }
-     else if ( c == '@' )              { target(trks); }
-     else if ( c == '=' )              { ctrl(trks); }
+     else if ( c == '@' )              { ctrl(trks); }
      else if ( c == ':' )              { defvalue(trks); }
      else if ( c == '"' )              { gettxt(trks); }
      else if ( c == '\'' )             { gettxt(trks); }
