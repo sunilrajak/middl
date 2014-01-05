@@ -13,8 +13,8 @@ TOP=../
 
 include $(TOP)config.mk
 
-HDRS= mf_rw.h mf_seq.h
-LIBOBJ = mf_rw$(_OBJ) mf_seq$(_OBJ)
+HDRS= mf_rw.h mf_seq.h mf_instr.h
+LIBOBJ = mf_rw$(_OBJ) mf_seq$(_OBJ) mf_instr$(_OBJ)
 LIBDIR =.
 
 $(LIBNAME) : mf.h $(LIBOBJ) 
@@ -31,8 +31,8 @@ ut_seq$(_EXE): mf_rw$(_OBJ) ut_seq$(_OBJ)
 ut_seq$(_OBJ): mf_seq.c
 	$(CC) -DDEBUG -DMF_SEQ_TEST -c -o ut_seq$(_OBJ) mf_seq.c
 	
-ut_score$(_EXE): mf_rw$(_OBJ) mf_seq$(_OBJ) ut_score$(_OBJ)
-	$(CC) -o $@ mf_rw$(_OBJ) mf_seq$(_OBJ) ut_score$(_OBJ)
+ut_score$(_EXE): mf_rw$(_OBJ) mf_seq$(_OBJ) mf_instr$(_OBJ) ut_score$(_OBJ)
+	$(CC) -o $@ mf_rw$(_OBJ) mf_seq$(_OBJ) mf_instr$(_OBJ) ut_score$(_OBJ)
 	
 ut_score$(_OBJ): mf_score.c
 	$(CC) -DDEBUG -DMF_SCORE_TEST -c -o ut_score$(_OBJ) mf_score.c

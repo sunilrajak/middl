@@ -12,6 +12,9 @@
 ** express or implied warranty.
 */
 
+#ifndef M_SEQ_H
+#define M_SEQ_H
+
 #include "mf_rw.h"
 
 #define MF_SEQ_TRACK_MAX 16
@@ -47,3 +50,5 @@ int mf_seq_get_track(mf_seq *ms, int track);
 int mf_seq_evt (mf_seq *ms, unsigned long tick, short type, short chan, short data1, short data2);
 int mf_seq_sys(mf_seq *ms, unsigned long tick, short type, short aux, long len, unsigned char *data);
 int mf_seq_text(mf_seq *ms, unsigned long tick, short type, char *txt);
+
+#endif

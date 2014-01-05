@@ -41,7 +41,7 @@ mf_seq *mf_seq_new (char *fname, short division)
 }
 
 #define getlong(q)  ((q)[0] << 24 | (q)[1] << 16 | (q)[2] << 8 | (q)[3])
-#if 0
+#if 1
 static void dmp_evts(mf_seq *ms)
 {
   unsigned long k;
@@ -71,24 +71,26 @@ static void dmp_evts(mf_seq *ms)
 }
 #endif
 
+static char *evt_ord = "98ABCDE7";
+#define evt_cmp_st(x) (evt_ord[((x)>>4) & 0x07])
+
 static int evt_cmp(const void *a, const void *b)
 {
-  return memcmp(((mf_evt *)a)->p,((mf_evt *)b)->p,6);
-  #if 0
   int ret = 0;
   int k;
   unsigned char *pa = ((mf_evt *)a)->p;
   unsigned char *pb = ((mf_evt *)b)->p;
   
-  for (k=0; ret == 0 && k < 6; k++) {
+  for (k=0; ret == 0 && k < 5; k++) {
     _dbgmsg("%d: %02X %02X\n",k,pa[k],pb[k]);
     ret = pa[k] - pb[k] ;
   }
+  if (ret == 0) { 
+    ret = evt_cmp_st(pb[5]) - evt_cmp_st(pa[5]);
+  }
+  
   return ret;
-  #endif
 }
-
-
 
 int mf_seq_close(mf_seq *ms)
 {
@@ -263,14 +265,14 @@ int mf_seq_evt (mf_seq *ms, unsigned long tick, short type, short chan, short da
 int mf_seq_sys(mf_seq *ms, unsigned long tick, short type, short aux,
                                                long len, unsigned char *data)
 {
-  int ret;
+  int ret = 0;
   
   if (!ms)  ret = 779;
   if (!ret) ret = chkbuf(ms,32+len);
   if (!ret) ret = chkevt(ms,1);
-  if (!ret) ret = type >= 0xF0 ? 0 : 778;
-
+  if (!ret) ret = (type >= 0xF0) ? 0 : 778;
   if (!ret) {  
+    _dbgmsg("SEQSYS: %d %d\n",ms->curtrack, type);
     add_evt(ms);
     
     add_byte(ms, ms->curtrack);
