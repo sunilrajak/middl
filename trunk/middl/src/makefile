@@ -20,7 +20,7 @@ LIBDIR =.
 $(LIBNAME) : mf.h $(LIBOBJ) 
 	$(AR) $@ $(LIBOBJ)
 
-CCOPTS = -DDEBUG	
+CCOPTS = -DDEBUG -g	
 
 mf.h: $(HDRS)
 	$(CAT) $(HDRS) > mf.h
@@ -29,19 +29,19 @@ ut_seq$(_EXE): mf_rw$(_OBJ) ut_seq$(_OBJ)
 	$(CC) -o $@ mf_rw$(_OBJ) ut_seq$(_OBJ)
 	
 ut_seq$(_OBJ): mf_seq.c
-	$(CC) -DDEBUG -DMF_SEQ_TEST -c -o ut_seq$(_OBJ) mf_seq.c
+	$(CC) $(CCOPTS)  -DMF_SEQ_TEST -c -o ut_seq$(_OBJ) mf_seq.c
 	
 ut_score$(_EXE): mf_rw$(_OBJ) mf_seq$(_OBJ) mf_instr$(_OBJ) ut_score$(_OBJ)
 	$(CC) -o $@ mf_rw$(_OBJ) mf_seq$(_OBJ) mf_instr$(_OBJ) ut_score$(_OBJ)
 	
 ut_score$(_OBJ): mf_score.c
-	$(CC) -DDEBUG -DMF_SCORE_TEST -c -o ut_score$(_OBJ) mf_score.c
+	$(CC) $(CCOPTS)  -DMF_SCORE_TEST -c -o ut_score$(_OBJ) mf_score.c
 	
 ut_read$(_EXE): mf_rw.c mf_rw.h
-	$(CC) -DDEBUG -DMF_READ_TEST -o ut_read$(_EXE) mf_rw.c
+	$(CC) $(CCOPTS)  -DMF_READ_TEST -o ut_read$(_EXE) mf_rw.c
 	
 ut_write$(_EXE): mf_rw.c mf_rw.h
-	$(CC) -DDEBUG -DMF_WRITE_TEST -o ut_write$(_EXE) mf_rw.c
+	$(CC) -$(CCOPTS)  -DMF_WRITE_TEST -o ut_write$(_EXE) mf_rw.c
 
 clean:
 	$(RM) mf.h
