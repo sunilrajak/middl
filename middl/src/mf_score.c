@@ -218,8 +218,8 @@ typedef struct {
   short num;
   short den;
   
-  short rpt;
-  unsigned long  rpt_pos[MAX_REPT];
+  short rpt_top;
+  unsigned char *rpt_pos[MAX_REPT];
            short rpt_cnt[MAX_REPT];
 
   unsigned long  trgt[10];
@@ -260,6 +260,17 @@ static unsigned long notelen(trk_data *trks)
       c = *(trks->ptr++);
     }
     else {
+      dur = (trks->ppqn * 4);
+      
+      switch (c) {
+        case 'w' : dur = (trks->ppqn * 4) ; c = *(trks->ptr++); break;
+        case 'h' : dur = (trks->ppqn * 2) ; c = *(trks->ptr++); break;
+        case 'q' : dur = (trks->ppqn    ) ; c = *(trks->ptr++); break;
+        case 'e' : dur = (trks->ppqn / 2) ; c = *(trks->ptr++); break;
+        case 's' : dur = (trks->ppqn / 4) ; c = *(trks->ptr++); break;
+        case 't' : dur = (trks->ppqn / 8) ; c = *(trks->ptr++); break;
+      }
+      
       while ('0' <= c && c <= '9') {
         div = div * 10 + (c -'0');  
         c = *(trks->ptr++);
@@ -275,7 +286,7 @@ static unsigned long notelen(trk_data *trks)
       }
       if (mul == 0) mul = 1;
       
-      dur = (trks->ppqn * 4) * mul;
+      dur = dur * mul;
       dur = dur / div;
       
       trks->dur[trks->track] = dur;
@@ -283,10 +294,8 @@ static unsigned long notelen(trk_data *trks)
   
   } 
   tmp = dur;
-  while ( c == ' ' || c == '\t')  c = *(trks->ptr++) ;
-  
-  while ( c == '=') {
-    dur += tmp;
+  while ( c == ' ' || c == '\t' ||  c == '=' ) {
+    if (c == '=') dur += tmp;
     c = *(trks->ptr++) ;
   }
   
@@ -298,11 +307,15 @@ static unsigned long notelen(trk_data *trks)
 static int getnum(trk_data *trks)
 {
   int n = 0;
-  short c;
+  unsigned char c;
   short d = 1;
 
-  if (*(trks->ptr) == '+')      { trks->ptr++;         }
-  else if (*(trks->ptr) == '-') { trks->ptr++; d = -1; }
+  c = *(trks->ptr);
+  
+  if ((c == '+' || c == '-')  && !isdigit(*(trks->ptr + 1))) return 0;
+   
+  if (c == '+')      { trks->ptr++;         }
+  else if (c == '-') { trks->ptr++; d = -1; }
   
   while ((c = *(trks->ptr)) && '0' <= c && c <= '9') {
     n = n * 10 + (c - '0');
@@ -328,7 +341,8 @@ static void getnote(trk_data *trks,int play)
      n = getnum(trks) + trks->note[trks->track];
      istmp = 1;
   }
-  else if (c == 'X' || c == 'X') {
+  else if (c == 'x' || c == 'X') {
+    dbgmsg("X: %p [%c]\n",trks->ptr,c);
     n = getnum(trks) + trks->note[trks->track];
     istmp = (c == 'x');
   }
@@ -386,14 +400,21 @@ static void rest(trk_data *trks)
   unsigned long dur;
   unsigned short mul = 0;
   
-  while((c = *(trks->ptr++)) == '-' || c == '=') mul++;
-  if (mul == 0) mul = 1;
-  
-  dur = notelen(trks) * mul; 
+  if ((c = *(trks->ptr)) == '-') {
+    for(;;) {
+     c = *(trks->ptr++);
+           if (c == '-' || c == '=')  { mul++; }
+      else if (c != '\t' && c != ' ') { trks->ptr--; break; }
+    }
+    dur = trks->dur[trks->track] * mul;
+  }
+  else {
+    dur = notelen(trks);
    
-  if (dur == 0 || c == 'r') {
-    trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_off, trks->chan[trks->track],
-                                          trks->note[trks->track], 0);
+    if (dur == 0 || c == 'r') {
+      trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_off, trks->chan[trks->track],
+                                            trks->note[trks->track], 0);
+    }
   }
   
   if (dur != DUR_INFINITE) {  trks->tick[trks->track] += dur; }  
@@ -685,7 +706,70 @@ static void gettxt(trk_data *trks)
    if (dur != DUR_INFINITE) {
      trks->tick[trks->track] += dur;
    }  
+}
+
+static void rptstart(trk_data *trks)
+{
+   unsigned char c;
    
+    trks->ptr++;
+    c = *(trks->ptr);
+    
+    if (c && trks->rpt_top < MAX_REPT) {
+      trks->rpt_pos[trks->rpt_top] = trks->ptr;
+      trks->rpt_cnt[trks->rpt_top] = -1;
+      trks->rpt_top++;
+    }
+}
+
+static void rptskipcnt(trk_data *trks)
+{
+   unsigned char c;
+   c = *(trks->ptr);
+   
+   if (c == '*') {
+     trks->ptr++;
+     while (isdigit((c = *(trks->ptr)))) {trks->ptr++;}
+   }
+}
+
+static void rptend(trk_data *trks)
+{
+  unsigned char c;
+  int k;
+  
+  trks->ptr++;       /* skip ) */
+  c = *(trks->ptr);
+   
+  if (trks->rpt_top == 0) {
+    rptskipcnt(trks);
+    return;
+  }
+        
+  k =  trks->rpt_top - 1;
+    
+  if (trks->rpt_cnt[k] > 0) { /* we are repeating */
+    trks->ptr = trks->rpt_pos[k];
+    trks->rpt_cnt[k]--;
+  }
+  else if (trks->rpt_cnt[k] == 0) { /* that was last repetition */
+    rptskipcnt(trks);
+    trks->rpt_top--;
+  }
+  else {  /* that was the first repetition (set cnt) */
+    if (c == '*') {
+      if (trks->rpt_top == MAX_REPT) {
+        rptskipcnt(trks);     
+      }
+      else {
+        trks->rpt_cnt[k] = 0;
+        trks->ptr++;
+        trks->rpt_cnt[k] = getnum(trks)-2;
+        if (trks->rpt_cnt[k] >= 0)  { trks->ptr = trks->rpt_pos[k]; }
+        else trks->rpt_top--;
+      }
+    }
+  }
 }
 
 static void parse(trk_data *trks)
@@ -694,10 +778,9 @@ static void parse(trk_data *trks)
   
    while ((c = *(trks->ptr))) {
      _dbgmsg("C: %c\n",c);
-     if (('A' <= c && c <= 'G') ||
-         ('a' <= c && c <= 'g') ||
-         ('0' <= c && c <= '9') ||
-         ( c == 'x') || (c == 'X' ))  { note(trks);     }
+     if (('A' <= c && c <= 'G') || ('a' <= c && c <= 'g') ||
+         ('0' <= c && c <= '9') || ( c == 'x') || (c == 'X' ))
+                                       { note(trks);     }
      else if ( c == 'r' || c == 'R' ||  c == '-')
                                        { rest(trks);     }
      else if ( c == '|' )              { chgtrack(trks); }
@@ -705,6 +788,8 @@ static void parse(trk_data *trks)
      else if ( c == '@' )              { ctrl(trks); }
      else if ( c == ':' )              { defvalue(trks); }
      else if ( c == '"' )              { gettxt(trks); }
+     else if ( c == '(' )              { rptstart(trks); }
+     else if ( c == ')' )              { rptend(trks); }
      else if ( c == '\'' )             { gettxt(trks); }
      else if ( isspace(c) )            { while (isspace(*(trks->ptr))) trks->ptr++; }
      else trks->ptr++;
@@ -733,12 +818,12 @@ static int tomidi(char *fname, short division, unsigned char *s)
     tracks.vol [k] = 90;
   }
 
-  tracks.track = 0;
-  tracks.ppqn = division;
-  tracks.buf  = s;
-  tracks.ptr  = tracks.buf;
-  tracks.err  = 0;
-  tracks.rpt  = 0;
+  tracks.track   = 0;
+  tracks.ppqn    = division;
+  tracks.buf     = s;
+  tracks.ptr     = tracks.buf;
+  tracks.err     = 0;
+  tracks.rpt_top = 0;
 
   tracks.ms = mf_seq_new(fname, division);
 
