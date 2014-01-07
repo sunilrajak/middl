@@ -13,6 +13,8 @@ ifneq "$(COMSPEC)" ""
  SYS=MINGW
 endif
 
+LUADIR=../../lua
+
 #SYS=MINGW
 
 ###############

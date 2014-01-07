@@ -43,6 +43,12 @@ ut_read$(_EXE): mf_rw.c mf_rw.h
 ut_write$(_EXE): mf_rw.c mf_rw.h
 	$(CC) -$(CCOPTS)  -DMF_WRITE_TEST -o ut_write$(_EXE) mf_rw.c
 
+lualibs:
+	$(CP) $(LUADIR)/src/lualib$(_LIB) $(LUADIR)/src/lua.h $(LUADIR)/src/lualib.h $(LUADIR)/src/lauxlib.h .
+	
+mf_lua$(_EXE): lualibs mf_lua$(_OBJ)
+	xx
+
 clean:
 	$(RM) mf.h
 	$(RM) $(LIBNAME)
