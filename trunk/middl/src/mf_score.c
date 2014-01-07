@@ -409,6 +409,7 @@ static void rest(trk_data *trks)
     dur = trks->dur[trks->track] * mul;
   }
   else {
+    trks->ptr++;
     dur = notelen(trks);
    
     if (dur == 0 || c == 'r') {
@@ -427,12 +428,15 @@ static void chgtrack(trk_data *trks)
   
   c = *(trks->ptr++); /* skip '|' */
   
-  trk = getnum(trks);
+  if (isdigit(*(trks->ptr)))  trk = getnum(trks);
+  else trk = trks->track+1; 
   
-  if (trk < 0 || MAX_TRACKS <= trk) return;
+  if (trk < 0) trk = 0;
+  else if (MAX_TRACKS <= trk) trk = MAX_TRACKS-1;
   
   trks->track = trk;
   mf_seq_set_track(trks->ms, trk);
+  
 }
 
 static void back(trk_data *trks)
