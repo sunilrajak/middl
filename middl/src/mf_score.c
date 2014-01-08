@@ -156,7 +156,7 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
  
   while (*p) {
 
-    if (*p == '=') {
+    if (*p == '@') {
       if (is_macro_def(p+1)) {
         p = addmacro(&macros, p+1);
       }
