@@ -587,20 +587,45 @@ static void setbpm(trk_data *trks)
   mf_seq_set_track(trks->ms, trks->track);
 }
 
+/* see  http://www.musictheory.net/lessons/25 */
+                               /* A   B   C   D   E   F   G */
+static unsigned char *keyacc = "\004\006\001\003\005\000\002";
+/*          maj        #         10   12  7   9   11   6   8
+                                 -2   0      -3   -1      -4
+                                 
+            min        #          7   9   4   6    8   3   5        
+                                     -3           -4                
 
+            maj        b         -4  -2  -7  -5   -3  -8  -6
+                                                       4
+                                                      
+            min        b         -7  -5 -10  -8   -6 -11  -9
+                                          2   4        1   3
+                                     
+*/
 static setkey(trk_data *trks)
-{ /*  =key:+3:min  */
+{ /*  =key:+3:min  @key:Db:min */
   short n = 0;
   short m = 0;
-  short c = 0;
+  short r = -1;
+  short a = 0;
   unsigned char data[4];
   unsigned char *p;
   
   skipctrl(trks);
-  n = getnum(trks);  
   
-  if (n < -7) n = -7;
-  else if (n > 7) n = 7;
+  p = trks->ptr;
+  
+  if (*p == '+' || *p == '-' || isdigit(*p)) {
+    n = getnum(trks);  
+  }
+  else if ('A' <= *p && *p <= 'G') {
+    r = *(trks->ptr++) - 'A';
+    a = *(trks->ptr++);
+    if (a == 'b') a = -1;
+    else if (a == '#') a = 1;
+    else { a = 0;  trks->ptr--;  }
+  }
 
   p = trks->ptr;
   if (strncmp(p,":min",4) == 0) {
@@ -611,7 +636,16 @@ static setkey(trk_data *trks)
     trks->ptr += 4;
   }  
 
-  _dbgmsg("P: %d %d [%s]\n",n,m,p);
+  if (r >= 0) {
+    n = keyacc[r]-1;
+    n += a * 7;
+    n -= m * 3;
+  }
+  
+  while (n < -7) n += 12;
+  while (n >  7) n -= 12;
+  
+  dbgmsg("Key: r=%d a=%d m=%d n=%d p=[%s]\n",r,a,m,n,p);
 
   data[0] = n; data[1] = m;
   
