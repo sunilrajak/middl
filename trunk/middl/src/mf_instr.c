@@ -99,6 +99,7 @@ static char *instr_names[] = {
    "\131padwarm",                    /*  89*/
    "\113panflute",                   /*  75*/
    "\021percussiveorgan",            /*  17*/
+   "\000piano",                      /*   0*/
    "\110piccolo",                    /*  72*/
    "\055pizzicatostrings",           /*  45*/
    "\112recorder",                   /*  74*/
