@@ -179,6 +179,8 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
       p = stk[--stk_top];
     } else if (*p == '{') {
       RETURN_ERR(903);                   /* stray open brace */
+    } else if (*p == ')' && *(p+1) == '&') { /*  transform ")&" in "&)"  */
+      addchar(&buf,'&');addchar(&buf,')'); p++;
     } else if (*p == '$') {
       if (p[1] == '$') {
          addchar(&buf,'$'); p++;
@@ -218,6 +220,8 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
 
 #define MAX_TRACKS  20
 #define MAX_REPT    32
+#define MAX_TRGT    10
+#define MAX_SCALE   16
 #define DUR_INFINITE 0xFFFFFFFF
 
 typedef struct {
@@ -235,7 +239,13 @@ typedef struct {
   unsigned char *rpt_pos[MAX_REPT];
            short rpt_cnt[MAX_REPT];
 
-  unsigned long  trgt[10];
+  unsigned long  trgt[MAX_TRGT];
+           
+  unsigned long  trgt_r[MAX_TRGT];
+           short trgt_n;
+
+  unsigned char  scale[MAX_SCALE];
+  unsigned short scale_n;
            
   unsigned long  tick[MAX_TRACKS];
   unsigned long   dur[MAX_TRACKS];
@@ -486,6 +496,35 @@ static void target(trk_data *trks)
   else trks->ptr--;
 }
 
+
+static void rtarget(trk_data *trks)
+{
+  unsigned char  c;
+  
+  c = *(trks->ptr++);
+  c = *(trks->ptr++);
+
+  if (c == '(') {
+    if (trks->trgt_n < MAX_TRGT) {
+      trks->trgt_r[trks->trgt_n++] = trks->tick[trks->track];
+      dbgmsg("RTRGT: %d\n",trks->trgt_r[trks->trgt_n-1]);
+    }
+  }
+  else if (c == ')') {
+    if (trks->trgt_n > 0) trks->trgt_n--;
+  }
+  else if (c == '&') {
+    if (trks->trgt_n > 0) {
+      trks->tick[trks->track] = trks->trgt_r[trks->trgt_n-1];
+      dbgmsg("RGOTO: %d\n",trks->tick[trks->track]);
+
+    }
+    else {trks->ptr-- ; back(trks);}
+  }
+  else {trks->ptr -=2 ; back(trks);}
+  
+}
+
 static void skiparg(trk_data *trks)
 {
   unsigned char  c;
@@ -512,6 +551,10 @@ static void skipctrl(trk_data *trks)
 }
 
 static setvol(trk_data *trks)
+{
+}
+
+static setvel(trk_data *trks)
 {
   short n = 0;
   skipctrl(trks);
@@ -587,6 +630,28 @@ static void setbpm(trk_data *trks)
   mf_seq_set_track(trks->ms, trks->track);
 }
 
+
+
+static char *scales[] = {
+   "aeo\007\002\001\002\002\001\002\002", 
+   "dor\007\002\001\002\002\002\001\002",
+   "har\007\002\001\002\002\001\003\001",
+   "ion\007\002\002\001\002\002\002\001",
+   "loc\007\001\002\002\001\002\002\002",
+   "lyd\007\002\002\002\001\002\002\001",
+   "maj\007\002\002\001\002\002\002\001",
+   "min\007\002\001\002\002\001\002\002",
+   "mix\007\002\002\001\002\002\001\002",
+   "nmj\007\001\002\002\002\002\002\001",
+   "nmn\007\001\002\002\002\001\003\001",
+   "phr\007\001\002\002\002\001\002\002",
+   "pmj\005\002\002\003\002\003"        ,
+   "pmn\005\003\002\002\003\002"        ,
+   NULL
+};
+
+
+
 /* see  http://www.musictheory.net/lessons/25 */
                                /* A   B   C   D   E   F   G */
 static unsigned char *keyacc = "\004\006\001\003\005\000\002";
@@ -628,14 +693,17 @@ static setkey(trk_data *trks)
   }
 
   p = trks->ptr;
-  if (strncmp(p,":min",4) == 0) {
-    m = 1;
-    trks->ptr += 4;
+  if (*p == ':') {
+    trks->ptr++;
+    p = trks->ptr;
+    if (strncmp(p,":min",4) == 0) {
+      m = 1;
+      trks->ptr += 4;
+    }
+    else if (strncmp(p,":maj",4) == 0) {
+      trks->ptr += 4;
+    }  
   }
-  else if (strncmp(p,":maj",4) == 0) {
-    trks->ptr += 4;
-  }  
-
   if (r >= 0) {
     n = keyacc[r]-1;
     n += a * 7;
@@ -645,7 +713,7 @@ static setkey(trk_data *trks)
   while (n < -7) n += 12;
   while (n >  7) n -= 12;
   
-  dbgmsg("Key: r=%d a=%d m=%d n=%d p=[%s]\n",r,a,m,n,p);
+  _dbgmsg("Key: r=%d a=%d m=%d n=%d p=[%s]\n",r,a,m,n,p);
 
   data[0] = n; data[1] = m;
   
@@ -710,6 +778,7 @@ static void ctrl(trk_data *trks)
   else if (strncmp(p,"bpm:"  ,4) == 0)    { setbpm(trks); } 
   else if (strncmp(p,"pan:"  ,4) == 0)    {  } 
   else if (strncmp(p,"vol:"  ,4) == 0)    { setvol(trks); }
+  else if (strncmp(p,"vel:"  ,4) == 0)    { setvel(trks); }
   else if (strncmp(p,"ch:"   ,3) == 0)    { setchan(trks); }
   else if (strncmp(p,"instr:",6) == 0)    { setinstr(trks); }
   else { skipctrl(trks); skiparg(trks); }
@@ -836,6 +905,7 @@ static void parse(trk_data *trks)
                                        { rest(trks);     }
      else if ( c == '|' )              { chgtrack(trks); }
      else if ( c == '<' )              { back(trks); }
+     else if ( c == '&' )              { rtarget(trks); }
      else if ( c == '@' )              { ctrl(trks); }
      else if ( c == ':' )              { defvalue(trks); }
      else if ( c == '"' )              { gettxt(trks); }
@@ -875,6 +945,7 @@ static int tomidi(char *fname, short division, unsigned char *s)
   tracks.ptr     = tracks.buf;
   tracks.err     = 0;
   tracks.rpt_top = 0;
+  tracks.trgt_n  = 0;
 
   tracks.ms = mf_seq_new(fname, division);
 
