@@ -17,7 +17,7 @@
 
 /*
 
-   =macro-name{jsjakdjks}
+   $macro-name{jsjakdjks}
    $macro-name
 
 */
@@ -27,7 +27,7 @@ static int is_idchar(unsigned char c)
 {
   return (c && (('A' <= c && c <= 'Z') || 
                 ('a' <= c && c <= 'z') ||
-                (c == '-')) );
+                (c == '_')) );
 }
 
 static int is_macro_def(unsigned char *q)
@@ -64,15 +64,6 @@ static int chkmacro(macro_defs *m, unsigned long n)
     m->macro_max = newmax;    
   }  
   return (m->macro_vec != NULL);
-}
-
-static unsigned char *addmacro(macro_defs *m,unsigned char *p)
-{
-  if (chkmacro(m,1)) {
-    m->macro_vec[m->macro_cnt++] = p;
-    while (*p && *p != '}') p++;
-  }
-  return p;
 }
 
 static unsigned char *skip_identifier(unsigned char *q)
@@ -143,6 +134,17 @@ static unsigned long addchar(charbuf *b, unsigned char c)
   return 0;
 }
 
+static unsigned long addlong(charbuf *b, unsigned long n)
+{
+  char data[16];
+  char *p;
+  sprintf(data,"%u",n);
+  p=data;
+  while (*p) addchar(b,*p++);
+  addchar(b,' ');
+  return 0;
+}
+
 #define MAX_STK_TOP 128
 
 #define RETURN_ERR(x) do {if (buf.buf) free(buf.buf); *err = (x); return p;} while(0)
@@ -152,10 +154,13 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
   macro_defs macros;
   charbuf buf;  
   
+  unsigned long line = 0;
+  
   unsigned char *p = inbuf;
   unsigned char *q;
 
   unsigned char *stk[MAX_STK_TOP];
+  unsigned long  stk_ln[MAX_STK_TOP];
   int stk_top = 0;
   
   macros.macro_vec = NULL;
@@ -166,32 +171,54 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
   buf.buf = NULL;
   buf.buf_cnt = 0;
   buf.buf_max = 0;
+  
+  addchar(&buf,'\n');
+  addlong(&buf,++line); 
  
   while (*p) {
-
-    if (*p == '@') {
-      if (is_macro_def(p+1)) {
-        p = addmacro(&macros, p+1);
-      }
-      else addchar(&buf,*p);
-    } else if (*p == '}') {
+    if (*p == '}') {
       if (stk_top == 0) RETURN_ERR(901); /* stray close brace */
-      p = stk[--stk_top];
+      stk_top--;
+      p = stk[stk_top];
+      line = stk_ln[stk_top];
+      addchar(&buf,'\n'); addlong(&buf, line); 
+    } else if (*p == '\r') {
+      if (p[1] != '\n') {
+        addchar(&buf,'\n'); addlong(&buf,++line); 
+      }
+    } else if (*p == '\n') {
+      addchar(&buf,'\n'); addlong(&buf,++line); 
     } else if (*p == '{') {
       RETURN_ERR(903);                   /* stray open brace */
-    } else if (*p == ')' && *(p+1) == '&') { /*  transform ")&" in "&)"  */
+    } else if (*p == ')' && p[1] == '&') { /*  transform ")&" in "&)"  */
       addchar(&buf,'&');addchar(&buf,')'); p++;
     } else if (*p == '$') {
       if (p[1] == '$') {
          addchar(&buf,'$'); p++;
+      }
+      else if (isdigit(p[1])) {
+         addchar(&buf,'$'); addchar(&buf,p[1]); p++;
+      }
+      else if (is_macro_def(p+1)) {
+        p++;
+        if (chkmacro(&macros,1)) {
+          macros.macro_vec[macros.macro_cnt++] = p;
+          while (*p && *p != '}') {
+            if (*p == '\n') line++;
+            if (*p == '\r' &&  p[1] != '\n') line++;
+            p++;
+          }
+        }
       }
       else {
         q = getmacro(&macros, p+1);
         if (q) {
           _dbgmsg("foundmacro: %s\n",q);
           if (stk_top == MAX_STK_TOP) RETURN_ERR(902); /* too many levels (infinite loop?) */
-          stk[stk_top++] = skip_identifier(p+1);
+          stk[stk_top] = skip_identifier(p+1);
+          stk_ln[stk_top] = line;
           p = q;
+          stk_top++;
         }
         else RETURN_ERR(904); /* undefined macro */
       }
@@ -199,13 +226,16 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
     else if (*p == '%') { /* strip Comment */
       while (*p && *p != '\r' && *p != '\n') p++;
       if (*p == '\r' && p[1] == '\n') p++;
+      addchar(&buf,'\n'); addlong(&buf,++line); 
     }
     else  addchar(&buf,*p);
 
     if (*p) p++;    
   }  
   addchar(&buf,'\n');
+  addlong(&buf,++line); 
   
+  fprintf(stderr,"%s",buf.buf);
   #if 0
   dbgmsg("macros: %d\n", macros.macro_cnt);
   {
@@ -234,6 +264,8 @@ typedef struct {
   
   short num;
   short den;
+  
+  unsigned long line;
   
   short rpt_top;
   unsigned char *rpt_pos[MAX_REPT];
@@ -482,20 +514,6 @@ static void back(trk_data *trks)
   _dbgmsg("BACK TO: %d\n", trks->tick[trks->track]);
 }
 
-static void target(trk_data *trks)
-{
-  unsigned char  c;
-  
-  c = *(trks->ptr++);
-  c = *(trks->ptr++);
-  
-  if ( '0' <= c && c <= '9') {
-    trks->trgt[c-'0'] = trks->tick[trks->track];
-    _dbgmsg("TARGET: %d\n", trks->tick[trks->track]);
-  }
-  else trks->ptr--;
-}
-
 
 static void rtarget(trk_data *trks)
 {
@@ -504,7 +522,10 @@ static void rtarget(trk_data *trks)
   c = *(trks->ptr++);
   c = *(trks->ptr++);
 
-  if (c == '(') {
+  if (isdigit(c)) {
+    trks->trgt[c-'0'] = trks->tick[trks->track];
+  }
+  else if (c == '(') {
     if (trks->trgt_n < MAX_TRGT) {
       trks->trgt_r[trks->trgt_n++] = trks->tick[trks->track];
       dbgmsg("RTRGT: %d\n",trks->trgt_r[trks->trgt_n-1]);
@@ -632,21 +653,21 @@ static void setbpm(trk_data *trks)
 
 
 
-static char *scales[] = {
-   "aeo\007\002\001\002\002\001\002\002", 
-   "dor\007\002\001\002\002\002\001\002",
-   "har\007\002\001\002\002\001\003\001",
-   "ion\007\002\002\001\002\002\002\001",
-   "loc\007\001\002\002\001\002\002\002",
-   "lyd\007\002\002\002\001\002\002\001",
-   "maj\007\002\002\001\002\002\002\001",
-   "min\007\002\001\002\002\001\002\002",
-   "mix\007\002\002\001\002\002\001\002",
-   "nmj\007\001\002\002\002\002\002\001",
-   "nmn\007\001\002\002\002\001\003\001",
-   "phr\007\001\002\002\002\001\002\002",
-   "pmj\005\002\002\003\002\003"        ,
-   "pmn\005\003\002\002\003\002"        ,
+static unsigned char *scales[] = {
+   "aeo\001\007\002\001\002\002\001\002\002", 
+   "dor\001\007\002\001\002\002\002\001\002",
+   "har\001\007\002\001\002\002\001\003\001",
+   "ion\000\007\002\002\001\002\002\002\001",
+   "loc\001\007\001\002\002\001\002\002\002",
+   "lyd\000\007\002\002\002\001\002\002\001",
+   "maj\000\007\002\002\001\002\002\002\001",
+   "min\001\007\002\001\002\002\001\002\002",
+   "mix\000\007\002\002\001\002\002\001\002",
+   "nmj\000\007\001\002\002\002\002\002\001",
+   "nmn\001\007\001\002\002\002\001\003\001",
+   "phr\001\007\001\002\002\002\001\002\002",
+   "pmj\000\005\002\002\003\002\003"        ,
+   "pmn\001\005\003\002\002\003\002"        ,
    NULL
 };
 
@@ -668,14 +689,37 @@ static unsigned char *keyacc = "\004\006\001\003\005\000\002";
                                           2   4        1   3
                                      
 */
+
+static char *getscale(char *s)
+{
+  char *q = NULL; 
+
+  if (s && s[0] && s[1] && s[2]) {
+    q = scales[0];
+    while (q && q[0] == s[0] &&
+                q[1] == s[1] &&
+                q[2] == s[2]) {
+      q++;
+    }
+  }
+  return q;
+}
+
+unsigned char *acc2root = 
+       "CbGbDbAbEbBbF C G D A E B F#C#"
+       "AbEbBbF C G D A E B F#C#G#D#A#";
+    
+#define NO_KEY 100
+
 static setkey(trk_data *trks)
 { /*  =key:+3:min  @key:Db:min */
-  short n = 0;
+  short n = NO_KEY;
   short m = 0;
   short r = -1;
   short a = 0;
   unsigned char data[4];
   unsigned char *p;
+  unsigned char *q;
   
   skipctrl(trks);
   
@@ -696,22 +740,23 @@ static setkey(trk_data *trks)
   if (*p == ':') {
     trks->ptr++;
     p = trks->ptr;
-    if (strncmp(p,":min",4) == 0) {
-      m = 1;
-      trks->ptr += 4;
-    }
-    else if (strncmp(p,":maj",4) == 0) {
-      trks->ptr += 4;
-    }  
+    q = getscale(p);
+    if (q) trks->ptr += 3;
   }
+  else q = getscale("maj");
+  
+  m = q[3];
+  trks->scale_n = q[4];
+  
   if (r >= 0) {
     n = keyacc[r]-1;
     n += a * 7;
     n -= m * 3;
-  }
+  } 
   
   while (n < -7) n += 12;
   while (n >  7) n -= 12;
+
   
   _dbgmsg("Key: r=%d a=%d m=%d n=%d p=[%s]\n",r,a,m,n,p);
 
