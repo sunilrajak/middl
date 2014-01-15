@@ -13,15 +13,12 @@
 */
 
 #include "mf_seq.h"
-
+#include <setjmp.h>
 
 /*
-
    $macro-name{jsjakdjks}
    $macro-name
-
 */
-
 
 static int is_idchar(unsigned char c)
 {
@@ -173,7 +170,7 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
   buf.buf_max = 0;
   
   addchar(&buf,'\n');
-  addlong(&buf,++line); 
+  addchar(&buf,'\t'); addlong(&buf,++line); 
  
   while (*p) {
     if (*p == '}') {
@@ -181,13 +178,17 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
       stk_top--;
       p = stk[stk_top];
       line = stk_ln[stk_top];
-      addchar(&buf,'\n'); addlong(&buf, line); 
+      addchar(&buf,'\n'); addchar(&buf,'\t'); addlong(&buf, line); 
+    } else if (*p == '\t') {
+      addchar(&buf,' ');
     } else if (*p == '\r') {
       if (p[1] != '\n') {
-        addchar(&buf,'\n'); addlong(&buf,++line); 
+        addchar(&buf,'\n'); 
+        if (stk_top == 0) {addchar(&buf,'\t'); addlong(&buf,++line); }
       }
     } else if (*p == '\n') {
-      addchar(&buf,'\n'); addlong(&buf,++line); 
+      addchar(&buf,'\n'); 
+      if (stk_top == 0) { addchar(&buf,'\t'); addlong(&buf,++line);  }
     } else if (*p == '{') {
       RETURN_ERR(903);                   /* stray open brace */
     } else if (*p == ')' && p[1] == '&') { /*  transform ")&" in "&)"  */
@@ -226,17 +227,17 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
     else if (*p == '%') { /* strip Comment */
       while (*p && *p != '\r' && *p != '\n') p++;
       if (*p == '\r' && p[1] == '\n') p++;
-      addchar(&buf,'\n'); addlong(&buf,++line); 
+      addchar(&buf,'\n'); addchar(&buf,'\t'); addlong(&buf,++line); 
     }
     else  addchar(&buf,*p);
 
     if (*p) p++;    
   }  
   addchar(&buf,'\n');
-  addlong(&buf,++line); 
+  addchar(&buf,'\t'); addlong(&buf,++line); 
   
-  fprintf(stderr,"%s",buf.buf);
   #if 0
+  fprintf(stderr,"%s",buf.buf);
   dbgmsg("macros: %d\n", macros.macro_cnt);
   {
     int k;
@@ -258,14 +259,15 @@ typedef struct {
   mf_seq *ms;
   unsigned char *buf;
   unsigned char *ptr;
+  unsigned long line;
+  jmp_buf errjmp;
   short ppqn;
+  
   short track;
   short err;
   
   short num;
   short den;
-  
-  unsigned long line;
   
   short rpt_top;
   unsigned char *rpt_pos[MAX_REPT];
@@ -937,6 +939,18 @@ static void rptend(trk_data *trks)
   }
 }
 
+static void getlinenum(trk_data *trks)
+{
+  unsigned char c;
+ 
+  trks->ptr++;       /* skip \t */
+  c = *(trks->ptr);
+
+  trks->line = getnum(trks);
+  trks->ptr++;       /* skip ' ' */
+}
+
+
 static void parse(trk_data *trks)
 {
    unsigned char c;
@@ -957,6 +971,7 @@ static void parse(trk_data *trks)
      else if ( c == '(' )              { rptstart(trks); }
      else if ( c == ')' )              { rptend(trks); }
      else if ( c == '\'' )             { gettxt(trks); }
+     else if ( c == '\t' )             { getlinenum(trks); }
      else if ( isspace(c) )            { while (isspace(*(trks->ptr))) trks->ptr++; }
      else trks->ptr++;
    }
@@ -984,6 +999,8 @@ static int tomidi(char *fname, short division, unsigned char *s)
     tracks.vol [k] = 90;
   }
 
+  tracks.line = 0;
+  
   tracks.track   = 0;
   tracks.ppqn    = division;
   tracks.buf     = s;
@@ -992,18 +1009,20 @@ static int tomidi(char *fname, short division, unsigned char *s)
   tracks.rpt_top = 0;
   tracks.trgt_n  = 0;
 
-  tracks.ms = mf_seq_new(fname, division);
-
   tracks.num = 4;
   tracks.den = 2;
   
+  tracks.ms = mf_seq_new(fname, division);
+
   if (tracks.ms) {  
-    parse(&tracks);
+    if (setjmp(tracks.errjmp) == 0) {
+      parse(&tracks);
+    }
     err = mf_seq_close(tracks.ms);
   } 
   else err = 910; /* Unable to open midifile */
 
-  err += tracks.err * 1000;
+  if (tracks.err) err = tracks.err;
 
   return err;
 }
