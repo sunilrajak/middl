@@ -15,6 +15,8 @@
 #include "mf_seq.h"
 #include <setjmp.h>
 
+#if 1 /*  **** MACRO EXPANSION */
+
 /*
    $macro-name{jsjakdjks}
    $macro-name
@@ -249,13 +251,17 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
   return buf.buf; 
 }
 
+#endif /* */ 
+
+#if 1 /*  **** PARSING */
+
 #define MAX_TRACKS  20
 #define MAX_REPT    32
 #define MAX_TRGT    10
 #define MAX_SCALE   16
 #define DUR_INFINITE 0xFFFFFFFF
 
-typedef struct {
+typedef struct { /* trk_data */
   mf_seq *ms;
   unsigned char *buf;
   unsigned char *ptr;
@@ -289,9 +295,7 @@ typedef struct {
   unsigned char   vol[MAX_TRACKS];
 } trk_data;
 
-
 static unsigned char *mnotes = "\x09\x0B\x00\x02\x04\x05\x07";
-
 
 static unsigned long notelen(trk_data *trks)
 {
@@ -405,7 +409,7 @@ static void getnote(trk_data *trks,int play)
   }
   else {
     if ('A' <= c && c <= 'G')       n = mnotes[c-'A'];
-    else if ('a' <= c && c <= 'g')  n = mnotes[c-'a']-1;
+    else if ('a' <= c && c <= 'g')  n = mnotes[c-'a'];
     else {trks->ptr--; return ;}
     
     c = *(trks->ptr++);
@@ -496,6 +500,8 @@ static void chgtrack(trk_data *trks)
   
 }
 
+#if 1/* *** REPEAT */
+
 static void back(trk_data *trks)
 {
   unsigned char  c;
@@ -515,7 +521,6 @@ static void back(trk_data *trks)
   }
   _dbgmsg("BACK TO: %d\n", trks->tick[trks->track]);
 }
-
 
 static void rtarget(trk_data *trks)
 {
@@ -547,6 +552,7 @@ static void rtarget(trk_data *trks)
   else {trks->ptr -=2 ; back(trks);}
   
 }
+#endif /**/
 
 static void skiparg(trk_data *trks)
 {
@@ -565,6 +571,7 @@ static void skiparg(trk_data *trks)
    }
    
 }
+
 
 static void skipctrl(trk_data *trks)
 {
@@ -596,7 +603,8 @@ static setchan(trk_data *trks)
 }
 
 static void setmeter(trk_data *trks)
-{ /*  =meter:3/4  */
+{
+  /*  =meter:3/4  */
   short n = 0;
   short d = 2;
   
@@ -653,7 +661,7 @@ static void setbpm(trk_data *trks)
   mf_seq_set_track(trks->ms, trks->track);
 }
 
-
+#if 1 /* *** SET KEY AND SCALE */
 
 static unsigned char *scales[] = {
    "aeo\001\007\002\001\002\002\001\002\002", 
@@ -672,7 +680,6 @@ static unsigned char *scales[] = {
    "pmn\001\005\003\002\002\003\002"        ,
    NULL
 };
-
 
 
 /* see  http://www.musictheory.net/lessons/25 */
@@ -768,6 +775,8 @@ static setkey(trk_data *trks)
   trks->err = mf_seq_sys(trks->ms,  trks->tick[trks->track], st_meta_event, me_key_signature, 2, data);
   mf_seq_set_track(trks->ms, trks->track);
 }
+
+#endif /**/ 
 
 static void setinstr(trk_data *trks)
 {
@@ -875,6 +884,7 @@ static void gettxt(trk_data *trks)
    }  
 }
 
+#if 1 /* REPEAT */
 static void rptstart(trk_data *trks)
 {
    unsigned char c;
@@ -938,6 +948,7 @@ static void rptend(trk_data *trks)
     }
   }
 }
+#endif /**/
 
 static void getlinenum(trk_data *trks)
 {
@@ -949,7 +960,6 @@ static void getlinenum(trk_data *trks)
   trks->line = getnum(trks);
   trks->ptr++;       /* skip ' ' */
 }
-
 
 static void parse(trk_data *trks)
 {
@@ -1042,6 +1052,9 @@ int mf_score(char *fname, short division, unsigned char *score)
   return err;
 }
 
+#endif /**/ 
+
+#if 1 /*  **** UNIT TEST */
 #ifdef MF_SCORE_TEST
 
 #define SCORE_BUF_SIZE 10239
@@ -1085,4 +1098,5 @@ int main(int argc, char *argv[])
 }
 
 #endif 
+#endif /**/ 
 
