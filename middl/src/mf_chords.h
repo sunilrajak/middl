@@ -11,15 +11,15 @@
 ** of this software for any purpose. It is provided "as is" without
 ** express or implied warranty.
 */
-#ifndef MF_INSTR_H
-#define MF_INSTR_H
+
+#ifndef MF_CHORDS_H
+#define MF_CHORDS_H
 
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <strings.h>
 
-int mf_instrbyname(char *name);
-int mf_percbyname(char *name);
+char *mf_chordbyname(char *name);
 
 #endif
