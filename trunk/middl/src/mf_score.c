@@ -13,6 +13,7 @@
 */
 
 #include "mf_seq.h"
+#include "mf_chords.h"
 #include <setjmp.h>
 
 #if 1 /*  **** MACRO EXPANSION */
@@ -200,7 +201,9 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
          addchar(&buf,'$'); p++;
       }
       else if (isdigit(p[1])) {
-         addchar(&buf,'$'); addchar(&buf,p[1]); p++;
+         if (p[1] == '0') RETURN_ERR(904);
+         addchar(&buf,'$'); addchar(&buf,p[1]); 
+         p++;
       }
       else if (is_macro_def(p+1)) {
         p++;
@@ -259,6 +262,7 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
 #define MAX_REPT    32
 #define MAX_TRGT    10
 #define MAX_SCALE   16
+#define MAX_CHORDN  16
 #define DUR_INFINITE 0xFFFFFFFF
 
 typedef struct { /* trk_data */
@@ -286,13 +290,14 @@ typedef struct { /* trk_data */
 
   unsigned char  scale[MAX_SCALE];
   unsigned short scale_n;
-           
-  unsigned long  tick[MAX_TRACKS];
-  unsigned long   dur[MAX_TRACKS];
-  unsigned char  chan[MAX_TRACKS];
-  unsigned char  note[MAX_TRACKS];
-  unsigned char  inst[MAX_TRACKS];
-  unsigned char   vol[MAX_TRACKS];
+  
+  unsigned long    tick[MAX_TRACKS];
+  unsigned long     dur[MAX_TRACKS];
+  unsigned char   notes[MAX_TRACKS][MAX_CHORDN];
+  unsigned char chord_n[MAX_TRACKS];
+  unsigned char    chan[MAX_TRACKS];
+  unsigned char    inst[MAX_TRACKS];
+  unsigned char     vol[MAX_TRACKS];
 } trk_data;
 
 static unsigned char *mnotes = "\x09\x0B\x00\x02\x04\x05\x07";
@@ -386,6 +391,65 @@ static int getnum(trk_data *trks)
   return n * d; 
 }
 
+static void getchord(trk_data *trks, short root, int play)
+{
+  unsigned long dur;
+  unsigned char c;
+  char *q;
+  unsigned char inv=0;
+  short k;
+  short n;
+  
+  c = *(trks->ptr++); /* skip '[' */
+  _dbgmsg("GCH1: %s\n",trks->ptr);
+  
+  q = mf_chordbyname(trks->ptr);
+  
+  _dbgmsg("GCH2: %p\n",q);
+  
+  /* look for inversion */
+  while ( (c = *(trks->ptr)) && c != ']' && c != ':') trks->ptr++;
+  if (c == ':') {
+    if (isdigit(*(trks->ptr+1))) {
+      c = *(trks->ptr++);
+      inv = c - '0';
+    }
+  }
+  while ( (c = *(trks->ptr)) && c != ']') trks->ptr++;
+  if (c) trks->ptr++;
+  
+  if (q) { /* chord found */
+    if (root < 0) root = trks->notes[trks->track][0];
+   
+    trks->notes[trks->track][1] = root;
+    for(k=2; *q && k < MAX_CHORDN; q++, k++) {
+      n = trks->notes[trks->track][k-1] + *q;
+      while (n < 0)    { n += 12; } 
+      while (n > 127)  { n -= 12; } 
+      trks->notes[trks->track][k] = n;
+    }
+    trks->chord_n[trks->track] = k-1;
+    dur = notelen(trks);
+    if (play) {
+      n = trks->chord_n[trks->track];
+      if (dur != 0) {
+        for (k=1; k<=n; k++) {
+          trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_on, trks->chan[trks->track],
+                                                 trks->notes[trks->track][k], trks->vol[trks->track]);
+        }
+      }
+      if (dur != DUR_INFINITE) {
+        trks->tick[trks->track] += dur;
+        for (k=1; k<=n; k++) {
+          trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_off, trks->chan[trks->track],
+                                                 trks->notes[trks->track][k], 0);
+        }  
+      }
+    }
+  }
+  
+}
+
 static void getnote(trk_data *trks,int play)
 {
   unsigned char c;
@@ -397,28 +461,37 @@ static void getnote(trk_data *trks,int play)
   
   c = *(trks->ptr++);
   
-  if ('0' <= c && c <= '9') {
-     trks->ptr--;
-     n = getnum(trks) + trks->note[trks->track];
-     istmp = 1;
+  if (isdigit(c)) {
+    trks->ptr--;
+    n = getnum(trks) + trks->notes[trks->track][0];
+    istmp = 1;
   }
-  else if (c == 'x' || c == 'X') {
-    dbgmsg("X: %p [%c]\n",trks->ptr,c);
-    n = getnum(trks) + trks->note[trks->track];
-    istmp = (c == 'x');
+  else if (c == '[') {
+    n = trks->notes[trks->track][0];
+    trks->ptr--;
+  }
+  else if (c == 'n' || c == 'N') {
+    istmp = (c == 'n');
+    _dbgmsg("n: %p [%c]\n",trks->ptr,c);
+    c = *(trks->ptr) ;
+    n = ( c == '+' || c == '-') ? trks->notes[trks->track][0] : 0;
+    n += getnum(trks);
   }
   else {
     if ('A' <= c && c <= 'G')       n = mnotes[c-'A'];
     else if ('a' <= c && c <= 'g')  n = mnotes[c-'a'];
+    else if (c == 'X')              n = trks->notes[trks->track][0] % 12;
+    else if (c == 'x')            { n = trks->notes[trks->track][0] % 12; istmp = 1;}
+    else if (c == '$' && isdigit(*(trks->ptr)))
+                                    n = trks->scale[(*(trks->ptr++) - '1') % trks->scale_n];
     else {trks->ptr--; return ;}
     
     c = *(trks->ptr++);
-    if (c == 'b')      { n--; }
-    else if (c == '#') { n++; }
+    if (c == 'b')      { n--; while ((c =*(trks->ptr)) == 'b')  {n--; trks->ptr++;} }
+    else if (c == '#') { n++; while ((c =*(trks->ptr)) == '#')  {n++; trks->ptr++;} }
     else trks->ptr--;
     
-    cur_oct = trks->note[trks->track] / 12;
-    
+    cur_oct = trks->notes[trks->track][0] / 12;
     c = *(trks->ptr++);
     if ('0' <= c && c <= '9')  { cur_oct = c-'0'+1; }
     else if ( c == 'N')        { cur_oct = 0; }
@@ -431,25 +504,30 @@ static void getnote(trk_data *trks,int play)
   while (n < 0)    { n += 12; } 
   while (n > 127)  { n -= 12; } 
   
-  if (!istmp) trks->note[trks->track] = n;
+  if (!istmp) trks->notes[trks->track][0] = n;
   
   n += tmp_oct * 12;
   while (n < 0)    { n += 12; } 
   while (n > 127)  { n -= 12; } 
-  
-  dur = notelen(trks);
-  
-  if (play) {
-    if (dur != 0) {
-      trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_on, trks->chan[trks->track],
-                                             n, trks->vol[trks->track]);
+
+  if (*(trks->ptr) == '[') {
+    getchord(trks, n, play);
+  }
+  else {
+    dur = notelen(trks);
+    
+    if (play) {
+      if (dur != 0) {
+        trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_on, trks->chan[trks->track],
+                                               n, trks->vol[trks->track]);
+      }
+      _dbgmsg("TICK: %d DUR: %d\n",  trks->tick[trks->track], dur);
+      if (dur != DUR_INFINITE) {
+        trks->tick[trks->track] += dur;
+        trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_off, trks->chan[trks->track],
+                                               n, 0);
+      }  
     }
-    _dbgmsg("TICK: %d DUR: %d\n",  trks->tick[trks->track], dur);
-    if (dur != DUR_INFINITE) {
-      trks->tick[trks->track] += dur;
-      trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_off, trks->chan[trks->track],
-                                             n, 0);
-    }  
   }
 }
 
@@ -475,7 +553,7 @@ static void rest(trk_data *trks)
    
     if (dur == 0 || c == 'r') {
       trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_off, trks->chan[trks->track],
-                                            trks->note[trks->track], 0);
+                                            trks->notes[trks->track][0], 0);
     }
   }
   
@@ -535,17 +613,19 @@ static void rtarget(trk_data *trks)
   else if (c == '(') {
     if (trks->trgt_n < MAX_TRGT) {
       trks->trgt_r[trks->trgt_n++] = trks->tick[trks->track];
-      dbgmsg("RTRGT: %d\n",trks->trgt_r[trks->trgt_n-1]);
+      _dbgmsg("RTRGT: %d\n",trks->trgt_r[trks->trgt_n-1]);
     }
   }
   else if (c == ')') {
     if (trks->trgt_n > 0) trks->trgt_n--;
   }
+  else if (c == '<') {
+    trks->ptr-- ; back(trks);
+  }
   else if (c == '&') {
     if (trks->trgt_n > 0) {
       trks->tick[trks->track] = trks->trgt_r[trks->trgt_n-1];
-      dbgmsg("RGOTO: %d\n",trks->tick[trks->track]);
-
+      _dbgmsg("RGOTO: %d\n",trks->tick[trks->track]);
     }
     else {trks->ptr-- ; back(trks);}
   }
@@ -590,16 +670,6 @@ static setvel(trk_data *trks)
   skipctrl(trks);
   n = getnum(trks);
   trks->vol[trks->track] = n;  
-}
-
-static setchan(trk_data *trks)
-{
-  short n = 0;
-  skipctrl(trks);
-  n = getnum(trks);
-  if (n>0) n--;
-  trks->chan[trks->track] = n & 0x0F;  
-  dbgmsg("CHAN: %d\n",n);
 }
 
 static void setmeter(trk_data *trks)
@@ -664,20 +734,20 @@ static void setbpm(trk_data *trks)
 #if 1 /* *** SET KEY AND SCALE */
 
 static unsigned char *scales[] = {
-   "aeo\001\007\002\001\002\002\001\002\002", 
-   "dor\001\007\002\001\002\002\002\001\002",
-   "har\001\007\002\001\002\002\001\003\001",
-   "ion\000\007\002\002\001\002\002\002\001",
-   "loc\001\007\001\002\002\001\002\002\002",
-   "lyd\000\007\002\002\002\001\002\002\001",
-   "maj\000\007\002\002\001\002\002\002\001",
-   "min\001\007\002\001\002\002\001\002\002",
-   "mix\000\007\002\002\001\002\002\001\002",
-   "nmj\000\007\001\002\002\002\002\002\001",
-   "nmn\001\007\001\002\002\002\001\003\001",
-   "phr\001\007\001\002\002\002\001\002\002",
-   "pmj\000\005\002\002\003\002\003"        ,
-   "pmn\001\005\003\002\002\003\002"        ,
+   "aeo\001\002\001\002\002\001\002", 
+   "dor\001\002\001\002\002\002\001",
+   "har\001\002\001\002\002\001\003",
+   "ion\000\002\002\001\002\002\002",
+   "loc\001\001\002\002\001\002\002",
+   "lyd\000\002\002\002\001\002\002",
+   "maj\000\002\002\001\002\002\002",
+   "min\001\002\001\002\002\001\002",
+   "mix\000\002\002\001\002\002\001",
+   "nmj\000\001\002\002\002\002\002",
+   "nmn\001\001\002\002\002\001\003",
+   "phr\001\001\002\002\002\001\002",
+   "pmj\000\002\002\003\002"        ,
+   "pmn\001\003\002\002\003"        ,
    NULL
 };
 
@@ -705,30 +775,37 @@ static char *getscale(char *s)
 
   if (s && s[0] && s[1] && s[2]) {
     q = scales[0];
-    while (q && q[0] == s[0] &&
-                q[1] == s[1] &&
-                q[2] == s[2]) {
+    while (1) {
+      if (q && q[0] == s[0] &&
+               q[1] == s[1] &&
+               q[2] == s[2]) break;
       q++;
     }
   }
+  /*if (q) dbgmsg("KEYq: %.3s %.3s\n",s,q);*/
   return q;
 }
 
-unsigned char *acc2root = 
-       "CbGbDbAbEbBbF C G D A E B F#C#"
-       "AbEbBbF C G D A E B F#C#G#D#A#";
+unsigned char *keyroot =
+      /* Cb  Gb  Db  Ab  Eb  Bb  F   C   G   D   A   E   B  F#   C# */
+       "\x0B\x06\x01\x08\x03\x0A\x06\x00\x07\x02\x09\x04\x0B\x06\x01"
+       "\x08\x03\x0A\x05\x00\x07\x02\x09\x04\x0B\x06\x01\x08\x03\x0A";
+      /* Ab  Eb  Bb  F   C   G   D   A   E   B   F#  C#  G#  D#  A# */
+      /* 0   1   2   3   4   5   6   7   8   9   10  11  12  13  14 */
     
 #define NO_KEY 100
 
 static setkey(trk_data *trks)
-{ /*  =key:+3:min  @key:Db:min */
+{ 
+  /*  @key:+3:min  @key:Db:min */
   short n = NO_KEY;
   short m = 0;
   short r = -1;
   short a = 0;
+  short k = 0;
   unsigned char data[4];
-  unsigned char *p;
-  unsigned char *q;
+  unsigned char *p = NULL;
+  unsigned char *q = NULL;
   
   skipctrl(trks);
   
@@ -750,14 +827,15 @@ static setkey(trk_data *trks)
     trks->ptr++;
     p = trks->ptr;
     q = getscale(p);
-    if (q) trks->ptr += 3;
+    _dbgmsg("KEY: %.3s %p\n",p,q);
   }
+  if (q) trks->ptr += 3;
   else q = getscale("maj");
   
   m = q[3];
-  trks->scale_n = q[4];
+  _dbgmsg("KEYm %d\n",m);
   
-  if (r >= 0) {
+  if (n == NO_KEY) {
     n = keyacc[r]-1;
     n += a * 7;
     n -= m * 3;
@@ -766,6 +844,12 @@ static setkey(trk_data *trks)
   while (n < -7) n += 12;
   while (n >  7) n -= 12;
 
+  trks->scale[0] = keyroot[(7+n)+m*15];
+  
+  for (k=1, q += 4; *q && k < MAX_SCALE; k++,q++) {
+    trks->scale[k] = trks->scale[k-1] + *q;
+  }
+  trks->scale_n = k+1;
   
   _dbgmsg("Key: r=%d a=%d m=%d n=%d p=[%s]\n",r,a,m,n,p);
 
@@ -824,9 +908,8 @@ static void ctrl(trk_data *trks)
 
   _dbgmsg("CTRL: [%c]\n",c);
   
-  if ( '0' <= c && c <= '9') {
-    trks->trgt[c-'0'] = trks->tick[trks->track];
-    _dbgmsg("TARGET: %d\n", trks->tick[trks->track]);
+  if ( '1' <= c && c <= '9') {
+    trks->chan[trks->track] = (c-'1');  
     trks->ptr++;
   }
   else if (strncmp(p,"meter:",6) == 0)    { setmeter(trks); }
@@ -835,7 +918,6 @@ static void ctrl(trk_data *trks)
   else if (strncmp(p,"pan:"  ,4) == 0)    {  } 
   else if (strncmp(p,"vol:"  ,4) == 0)    { setvol(trks); }
   else if (strncmp(p,"vel:"  ,4) == 0)    { setvel(trks); }
-  else if (strncmp(p,"ch:"   ,3) == 0)    { setchan(trks); }
   else if (strncmp(p,"instr:",6) == 0)    { setinstr(trks); }
   else { skipctrl(trks); skiparg(trks); }
   
@@ -849,8 +931,7 @@ static void defvalue(trk_data *trks)
   c = *(trks->ptr);
   _dbgmsg("DEFV: [%c]\n",c);
   if (!c || isspace(c)) return;
-  if ( ('A' <= c && c <= 'G') || ('a' <= c && c <= 'g') )
-    getnote(trks,0);
+  getnote(trks,0);
    
 }  
 
@@ -885,6 +966,7 @@ static void gettxt(trk_data *trks)
 }
 
 #if 1 /* REPEAT */
+
 static void rptstart(trk_data *trks)
 {
    unsigned char c;
@@ -954,11 +1036,14 @@ static void getlinenum(trk_data *trks)
 {
   unsigned char c;
  
-  trks->ptr++;       /* skip \t */
-  c = *(trks->ptr);
-
-  trks->line = getnum(trks);
-  trks->ptr++;       /* skip ' ' */
+  trks->ptr++;       /* skip \n */
+  c = *(trks->ptr++);
+  if (c == '\t') {
+    trks->line = getnum(trks);
+    trks->ptr++;       /* skip ' ' */
+  }
+  else trks->ptr--;
+  _dbgmsg("LINE: %d\n",trks->line);
 }
 
 static void parse(trk_data *trks)
@@ -968,12 +1053,12 @@ static void parse(trk_data *trks)
    while ((c = *(trks->ptr))) {
      _dbgmsg("C: %c\n",c);
      if (('A' <= c && c <= 'G') || ('a' <= c && c <= 'g') ||
-         ('0' <= c && c <= '9') || ( c == 'x') || (c == 'X' ))
+         ('0' <= c && c <= '9') || ( c == 'n') || (c == 'N' ) ||
+         (c == '$') || ( c == 'x') || (c == 'X' ) )
                                        { note(trks);     }
      else if ( c == 'r' || c == 'R' ||  c == '-')
                                        { rest(trks);     }
      else if ( c == '|' )              { chgtrack(trks); }
-     else if ( c == '<' )              { back(trks); }
      else if ( c == '&' )              { rtarget(trks); }
      else if ( c == '@' )              { ctrl(trks); }
      else if ( c == ':' )              { defvalue(trks); }
@@ -981,8 +1066,8 @@ static void parse(trk_data *trks)
      else if ( c == '(' )              { rptstart(trks); }
      else if ( c == ')' )              { rptend(trks); }
      else if ( c == '\'' )             { gettxt(trks); }
-     else if ( c == '\t' )             { getlinenum(trks); }
-     else if ( isspace(c) )            { while (isspace(*(trks->ptr))) trks->ptr++; }
+     else if ( c == '\n' )             { getlinenum(trks); }
+     else if ( isspace(c) )            { trks->ptr++; }
      else trks->ptr++;
    }
 }
@@ -1000,13 +1085,24 @@ static int tomidi(char *fname, short division, unsigned char *s)
     tracks.trgt[k] = 0;
   }
   
+  tracks.scale[0] =  0;  /* C */
+  tracks.scale[1] =  2;  /* D */
+  tracks.scale[2] =  4;  /* E */
+  tracks.scale[3] =  5;  /* F */
+  tracks.scale[4] =  7;  /* G */
+  tracks.scale[5] =  9;  /* A */
+  tracks.scale[6] = 11;  /* B */
+
+  tracks.scale_n = 7;
+  
   for (k = 0; k < MAX_TRACKS; k++) {
-    tracks.dur [k] = division;
-    tracks.tick[k] = 0;
-    tracks.chan[k] = 0;
-    tracks.inst[k] = 0;
-    tracks.note[k] = 60;
-    tracks.vol [k] = 90;
+       tracks.dur [k]     = division;  /* a quarter note */
+       tracks.tick[k]     = 0;
+       tracks.chan[k]     = 0;
+       tracks.inst[k]     = 0;
+      tracks.notes[k][0]  = 60;
+    tracks.chord_n[k]     = 0;
+        tracks.vol[k]     = 90;
   }
 
   tracks.line = 0;
@@ -1054,7 +1150,6 @@ int mf_score(char *fname, short division, unsigned char *score)
 
 #endif /**/ 
 
-#if 1 /*  **** UNIT TEST */
 #ifdef MF_SCORE_TEST
 
 #define SCORE_BUF_SIZE 10239
@@ -1098,5 +1193,4 @@ int main(int argc, char *argv[])
 }
 
 #endif 
-#endif /**/ 
 
