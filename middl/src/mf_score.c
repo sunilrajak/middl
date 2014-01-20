@@ -313,20 +313,30 @@ static short in_127(short n)
 static unsigned char ch_advance(trk_data *trks)
 { return *(trks->ptr++); }
 
-static unsigned char ch_unget(trk_data *trks)
-{ trks->ptr--; return *(trks->ptr); }
-
 static unsigned char ch_current(trk_data *trks)
 { return *(trks->ptr); }
 
 static unsigned char ch_next(trk_data *trks)
 { trks->ptr++; return *(trks->ptr); }
 
+static unsigned char *ptr_current(trk_data *trks)
+{ return trks->ptr; }
+
+static unsigned char *ptr_advance(trk_data *trks)
+{ return trks->ptr++; }
+
+static unsigned char ch_get(trk_data *trks)
+{ trks->ptr++; return *(trks->ptr); }
+
+static unsigned char ch_unget(trk_data *trks)
+{ if (trks->ptr > trks->buf) trks->ptr--; return *(trks->ptr); }
+
+static unsigned char ch_cur(trk_data *trks)
+{ return *(trks->ptr); }
+
 static unsigned char ch_ahead(trk_data *trks)
 { return *(trks->ptr + 1); }
 
-static unsigned char *ptr_current(trk_data *trks)
-{ return trks->ptr; }
 
 static unsigned long notelen(trk_data *trks)
 {
@@ -1071,7 +1081,7 @@ static void parse(trk_data *trks)
 {
    unsigned char c;
   
-   while ((c = ch_current(trks))) {
+   while ((c = ch_cur(trks))) {
      _dbgmsg("C: %c\n",c);
      if (('A' <= c && c <= 'G') || ('a' <= c && c <= 'g') ||
          ('0' <= c && c <= '9') || ( c == 'n') || (c == 'N' ) ||
@@ -1151,7 +1161,8 @@ static int tomidi(char *fname, short division, unsigned char *s)
 
   if (tracks.err) err = tracks.err;
 
-  return tracks.line * 1000 + err;
+  if (err) err = tracks.line * 1000 + err;
+  return err;
 }
 
 int mf_score(char *fname, short division, unsigned char *score)
