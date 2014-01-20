@@ -84,7 +84,7 @@ static unsigned char *getmacro(macro_defs *m,unsigned char *p)
 {
    int k;
    _dbgmsg("getmacro: %s\n",p);
-   for (k=0; k< m->macro_cnt; k++) {
+   for (k=0; k < m->macro_cnt; k++) {
      if (id_cmp(m->macro_vec[k] , p) == 0) {
        p = m->macro_vec[k];
        while (*p && *p != '{') p++;
@@ -93,7 +93,6 @@ static unsigned char *getmacro(macro_defs *m,unsigned char *p)
    }
    return NULL;
 }
-
 
 typedef struct {
   unsigned char *buf;
@@ -147,7 +146,9 @@ static unsigned long addlong(charbuf *b, unsigned long n)
 
 #define MAX_STK_TOP 128
 
-#define RETURN_ERR(x) do {if (buf.buf) free(buf.buf); *err = (x); return p;} while(0)
+#define RETURN_ERR(x) do {if (buf.buf) free(buf.buf); *err = line * 1000 + (x); return p;} while(0)
+
+#define addline(b,x) do { addchar(b,'\t'); addlong(b, x); } while (0)
 
 static unsigned char *demacro(unsigned char *inbuf, int *err)
 {
@@ -173,7 +174,7 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
   buf.buf_max = 0;
   
   addchar(&buf,'\n');
-  addchar(&buf,'\t'); addlong(&buf,++line); 
+  addline(&buf,++line); 
  
   while (*p) {
     if (*p == '}') {
@@ -181,17 +182,17 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
       stk_top--;
       p = stk[stk_top];
       line = stk_ln[stk_top];
-      addchar(&buf,'\n'); addchar(&buf,'\t'); addlong(&buf, line); 
+      addchar(&buf,'\n'); addline(&buf, line); 
     } else if (*p == '\t') {
       addchar(&buf,' ');
     } else if (*p == '\r') {
       if (p[1] != '\n') {
         addchar(&buf,'\n'); 
-        if (stk_top == 0) {addchar(&buf,'\t'); addlong(&buf,++line); }
+        if (stk_top == 0) {addline(&buf, ++line); }
       }
     } else if (*p == '\n') {
       addchar(&buf,'\n'); 
-      if (stk_top == 0) { addchar(&buf,'\t'); addlong(&buf,++line);  }
+      if (stk_top == 0) { addline(&buf, ++line);  }
     } else if (*p == '{') {
       RETURN_ERR(903);                   /* stray open brace */
     } else if (*p == ')' && p[1] == '&') { /*  transform ")&" in "&)"  */
@@ -232,14 +233,14 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
     else if (*p == '%') { /* strip Comment */
       while (*p && *p != '\r' && *p != '\n') p++;
       if (*p == '\r' && p[1] == '\n') p++;
-      addchar(&buf,'\n'); addchar(&buf,'\t'); addlong(&buf,++line); 
+      addchar(&buf,'\n'); addline(&buf, ++line); 
     }
     else  addchar(&buf,*p);
 
     if (*p) p++;    
   }  
   addchar(&buf,'\n');
-  addchar(&buf,'\t'); addlong(&buf,++line); 
+  addline(&buf, ++line); 
   
   #if 0
   fprintf(stderr,"%s",buf.buf);
@@ -302,6 +303,31 @@ typedef struct { /* trk_data */
 
 static unsigned char *mnotes = "\x09\x0B\x00\x02\x04\x05\x07";
 
+static short in_127(short n)
+{
+  while (n < 0)    { n += 12; } 
+  while (n > 127)  { n -= 12; } 
+  return n;
+}
+
+static unsigned char ch_advance(trk_data *trks)
+{ return *(trks->ptr++); }
+
+static unsigned char ch_unget(trk_data *trks)
+{ trks->ptr--; return *(trks->ptr); }
+
+static unsigned char ch_current(trk_data *trks)
+{ return *(trks->ptr); }
+
+static unsigned char ch_next(trk_data *trks)
+{ trks->ptr++; return *(trks->ptr); }
+
+static unsigned char ch_ahead(trk_data *trks)
+{ return *(trks->ptr + 1); }
+
+static unsigned char *ptr_current(trk_data *trks)
+{ return trks->ptr; }
+
 static unsigned long notelen(trk_data *trks)
 {
   unsigned char c;
@@ -311,43 +337,43 @@ static unsigned long notelen(trk_data *trks)
   unsigned short div = 0;
 
   
-  c = *(trks->ptr++);
+  c = ch_advance(trks);
   dur = trks->dur[trks->track];
   if ( c == '/') {
     
-    c = *(trks->ptr++);
+    c = ch_advance(trks);
     
     if (c == '+') {
       dur = DUR_INFINITE;
-      c = *(trks->ptr++);
+      c = ch_advance(trks);
     }
     else if (c == '-') {
       dur = 0;
-      c = *(trks->ptr++);
+      c = ch_advance(trks);
     }
     else {
       dur = (trks->ppqn * 4);
       
       switch (c) {
-        case 'w' : dur = (trks->ppqn * 4) ; c = *(trks->ptr++); break;
-        case 'h' : dur = (trks->ppqn * 2) ; c = *(trks->ptr++); break;
-        case 'q' : dur = (trks->ppqn    ) ; c = *(trks->ptr++); break;
-        case 'e' : dur = (trks->ppqn / 2) ; c = *(trks->ptr++); break;
-        case 's' : dur = (trks->ppqn / 4) ; c = *(trks->ptr++); break;
-        case 't' : dur = (trks->ppqn / 8) ; c = *(trks->ptr++); break;
+        case 'w' : dur = (trks->ppqn * 4) ; c = ch_advance(trks); break;
+        case 'h' : dur = (trks->ppqn * 2) ; c = ch_advance(trks); break;
+        case 'q' : dur = (trks->ppqn    ) ; c = ch_advance(trks); break;
+        case 'e' : dur = (trks->ppqn / 2) ; c = ch_advance(trks); break;
+        case 's' : dur = (trks->ppqn / 4) ; c = ch_advance(trks); break;
+        case 't' : dur = (trks->ppqn / 8) ; c = ch_advance(trks); break;
       }
       
       while ('0' <= c && c <= '9') {
         div = div * 10 + (c -'0');  
-        c = *(trks->ptr++);
+        c = ch_advance(trks);
       }
       if (div == 0) div = 1;
       
       if (c == '*') {
-        c = *(trks->ptr++);
+        c = ch_advance(trks);
         while ('0' <= c && c <= '9') {
           mul = mul * 10 + (c -'0');  
-          c = *(trks->ptr++);
+          c = ch_advance(trks);
         }
       }
       if (mul == 0) mul = 1;
@@ -362,10 +388,10 @@ static unsigned long notelen(trk_data *trks)
   tmp = dur;
   while ( c == ' ' || c == '\t' ||  c == '=' ) {
     if (c == '=') dur += tmp;
-    c = *(trks->ptr++) ;
+    c = ch_advance(trks) ;
   }
   
-  trks->ptr--;
+  ch_unget(trks);
   
   return dur;
 }
@@ -376,16 +402,16 @@ static int getnum(trk_data *trks)
   unsigned char c;
   short d = 1;
 
-  c = *(trks->ptr);
+  c = ch_current(trks);
   
-  if ((c == '+' || c == '-')  && !isdigit(*(trks->ptr + 1))) return 0;
+  if ((c == '+' || c == '-')  && !isdigit(ch_ahead(trks))) return 0;
    
-  if (c == '+')      { trks->ptr++;         }
-  else if (c == '-') { trks->ptr++; d = -1; }
+  if (c == '+')      { c = ch_advance(trks);         }
+  else if (c == '-') { c = ch_advance(trks); d = -1; }
   
-  while ((c = *(trks->ptr)) && '0' <= c && c <= '9') {
+  while ((c = ch_current(trks)) && '0' <= c && c <= '9') {
     n = n * 10 + (c - '0');
-    trks->ptr++;
+    c = ch_advance(trks);
   }
    
   return n * d; 
@@ -400,32 +426,32 @@ static void getchord(trk_data *trks, short root, int play)
   short k;
   short n;
   
-  c = *(trks->ptr++); /* skip '[' */
-  _dbgmsg("GCH1: %s\n",trks->ptr);
+  c = ch_advance(trks); /* skip '[' */
+  _dbgmsg("GCH1: %s\n",ptr_current(trks));
   
-  q = mf_chordbyname(trks->ptr);
+  q = mf_chordbyname(ptr_current(trks));
   
   _dbgmsg("GCH2: %p\n",q);
   
   /* look for inversion */
-  while ( (c = *(trks->ptr)) && c != ']' && c != ':') trks->ptr++;
+  while ( (c = ch_current(trks)) && c != ']' && c != ':') c = ch_advance(trks);
   if (c == ':') {
-    if (isdigit(*(trks->ptr+1))) {
-      c = *(trks->ptr++);
+    if (isdigit(ch_ahead(trks))) {
+      c = ch_advance(trks);
       inv = c - '0';
     }
   }
-  while ( (c = *(trks->ptr)) && c != ']') trks->ptr++;
-  if (c) trks->ptr++;
+  while ( (c = ch_current(trks)) && c != ']')
+    c = ch_advance(trks);
+  if (c) c = ch_advance(trks);;
   
-  if (q) { /* chord found */
+  if (q) {        /* chord found */
     if (root < 0) root = trks->notes[trks->track][0];
    
     trks->notes[trks->track][1] = root;
     for(k=2; *q && k < MAX_CHORDN; q++, k++) {
       n = trks->notes[trks->track][k-1] + *q;
-      while (n < 0)    { n += 12; } 
-      while (n > 127)  { n -= 12; } 
+      n = in_127(n);
       trks->notes[trks->track][k] = n;
     }
     trks->chord_n[trks->track] = k-1;
@@ -459,21 +485,21 @@ static void getnote(trk_data *trks,int play)
   short tmp_oct = 0;
   unsigned long dur;
   
-  c = *(trks->ptr++);
+  c = ch_advance(trks);
   
   if (isdigit(c)) {
-    trks->ptr--;
+    ch_unget(trks);
     n = getnum(trks) + trks->notes[trks->track][0];
     istmp = 1;
   }
   else if (c == '[') {
     n = trks->notes[trks->track][0];
-    trks->ptr--;
+    ch_unget(trks);
   }
   else if (c == 'n' || c == 'N') {
     istmp = (c == 'n');
-    _dbgmsg("n: %p [%c]\n",trks->ptr,c);
-    c = *(trks->ptr) ;
+    _dbgmsg("n: %p [%c]\n",ptr_current(trks),c);
+    c = ch_current(trks) ;
     n = ( c == '+' || c == '-') ? trks->notes[trks->track][0] : 0;
     n += getnum(trks);
   }
@@ -481,36 +507,36 @@ static void getnote(trk_data *trks,int play)
     if ('A' <= c && c <= 'G')       n = mnotes[c-'A'];
     else if ('a' <= c && c <= 'g')  n = mnotes[c-'a'];
     else if (c == 'X')              n = trks->notes[trks->track][0] % 12;
-    else if (c == 'x')            { n = trks->notes[trks->track][0] % 12; istmp = 1;}
-    else if (c == '$' && isdigit(*(trks->ptr)))
-                                    n = trks->scale[(*(trks->ptr++) - '1') % trks->scale_n];
-    else {trks->ptr--; return ;}
+    else if (c == 'x')            { n = trks->notes[trks->track][0] % 12; istmp = 1; }
+    else if (c == '$' && isdigit(ch_current(trks)))
+                                    n = trks->scale[(ch_advance(trks) - '1') % trks->scale_n];
+    else {ch_unget(trks); return ;}
     
-    c = *(trks->ptr++);
-    if (c == 'b')      { n--; while ((c =*(trks->ptr)) == 'b')  {n--; trks->ptr++;} }
-    else if (c == '#') { n++; while ((c =*(trks->ptr)) == '#')  {n++; trks->ptr++;} }
-    else trks->ptr--;
+    c = ch_advance(trks);
+    if (c == 'b')      { n--; while ((c = ch_current(trks)) == 'b')  {n--; c = ch_advance(trks);} }
+    else if (c == '#') { n++; while ((c = ch_current(trks)) == '#')  {n++; c = ch_advance(trks);} }
+    else ch_unget(trks);
     
     cur_oct = trks->notes[trks->track][0] / 12;
-    c = *(trks->ptr++);
+    c = ch_advance(trks);
     if ('0' <= c && c <= '9')  { cur_oct = c-'0'+1; }
     else if ( c == 'N')        { cur_oct = 0; }
-    else if ( c == '\'')       { tmp_oct++; while ((c =*(trks->ptr)) == '\'')  {tmp_oct++; trks->ptr++;} }
-    else if ( c == ',')        { tmp_oct--; while ((c =*(trks->ptr)) == ',')   {tmp_oct--; trks->ptr++;} }
-    else trks->ptr--;
+    else if ( c == '\'')       { tmp_oct++; while ((c = ch_current(trks)) == '\'')  {tmp_oct++; c = ch_advance(trks);} }
+    else if ( c == ',')        { tmp_oct--; while ((c = ch_current(trks)) == ',')   {tmp_oct--; c = ch_advance(trks);} }
+    else ch_unget(trks);
     
     n += cur_oct * 12;   
   }
-  while (n < 0)    { n += 12; } 
-  while (n > 127)  { n -= 12; } 
-  
+
+  n = in_127(n);
+
   if (!istmp) trks->notes[trks->track][0] = n;
   
   n += tmp_oct * 12;
-  while (n < 0)    { n += 12; } 
-  while (n > 127)  { n -= 12; } 
 
-  if (*(trks->ptr) == '[') {
+  n = in_127(n);
+
+  if (ch_current(trks) == '[') {
     getchord(trks, n, play);
   }
   else {
@@ -531,24 +557,22 @@ static void getnote(trk_data *trks,int play)
   }
 }
 
-#define note(t) getnote(t,1)
-
 static void rest(trk_data *trks)
 {
   unsigned char c;
   unsigned long dur;
   unsigned short mul = 0;
   
-  if ((c = *(trks->ptr)) == '-') {
+  if ((c = ch_current(trks)) == '-') {
     for(;;) {
-     c = *(trks->ptr++);
+     c = ch_advance(trks);
            if (c == '-' || c == '=')  { mul++; }
-      else if (c != '\t' && c != ' ') { trks->ptr--; break; }
+      else if (c != '\t' && c != ' ') { ch_unget(trks); break; }
     }
     dur = trks->dur[trks->track] * mul;
   }
   else {
-    trks->ptr++;
+    c = ch_advance(trks);
     dur = notelen(trks);
    
     if (dur == 0 || c == 'r') {
@@ -565,9 +589,9 @@ static void chgtrack(trk_data *trks)
   unsigned char  c;
   unsigned short trk;
   
-  c = *(trks->ptr++); /* skip '|' */
+  c = ch_advance(trks); /* skip '|' */
   
-  if (isdigit(*(trks->ptr)))  trk = getnum(trks);
+  if (isdigit(ch_current(trks)))  trk = getnum(trks);
   else trk = trks->track+1; 
   
   if (trk < 0) trk = 0;
@@ -584,12 +608,12 @@ static void back(trk_data *trks)
 {
   unsigned char  c;
   
-  c = *(trks->ptr++);
+  c = ch_advance(trks);
   
-  c = *(trks->ptr);
-  if ( '0' <= c && c <= '9') {
+  c = ch_current(trks);
+  if ( isdigit(c)) {
     trks->tick[trks->track] = trks->trgt[c-'0'];
-    trks->ptr++;
+    c = ch_advance(trks);
   }
   else if (trks->dur[trks->track] != DUR_INFINITE) {
     if (trks->tick[trks->track] < trks->dur[trks->track])
@@ -604,8 +628,8 @@ static void rtarget(trk_data *trks)
 {
   unsigned char  c;
   
-  c = *(trks->ptr++);
-  c = *(trks->ptr++);
+  c = ch_advance(trks);
+  c = ch_advance(trks);
 
   if (isdigit(c)) {
     trks->trgt[c-'0'] = trks->tick[trks->track];
@@ -620,14 +644,14 @@ static void rtarget(trk_data *trks)
     if (trks->trgt_n > 0) trks->trgt_n--;
   }
   else if (c == '<') {
-    trks->ptr-- ; back(trks);
+    ch_unget(trks) ; back(trks);
   }
   else if (c == '&') {
     if (trks->trgt_n > 0) {
       trks->tick[trks->track] = trks->trgt_r[trks->trgt_n-1];
       _dbgmsg("RGOTO: %d\n",trks->tick[trks->track]);
     }
-    else {trks->ptr-- ; back(trks);}
+    else {ch_unget(trks) ; back(trks);}
   }
   else {trks->ptr -=2 ; back(trks);}
   
@@ -637,27 +661,26 @@ static void rtarget(trk_data *trks)
 static void skiparg(trk_data *trks)
 {
   unsigned char  c;
-   c = *(trks->ptr++);
+   c = ch_advance(trks);
    if (c == '"') {
-      c = *(trks->ptr++);
+      c = ch_advance(trks);
       while (c && c != '"') {
-        if (c == '\\' && *(trks->ptr)) trks->ptr++;
-        c = *(trks->ptr++);
+        if (c == '\\' && ch_current(trks)) c = ch_advance(trks);
+        c = ch_advance(trks);
       }
-      if (c) trks->ptr++;
+      if (c) { c = ch_advance(trks); }
    }
    else {
-     while (c && !isspace(c)) c = *(trks->ptr++); 
+     while (c && !isspace(c)) c = ch_advance(trks); 
    }
    
 }
 
-
 static void skipctrl(trk_data *trks)
 {
   unsigned char  c;
-  c = *(trks->ptr++);
-  while (c && c != ':') c = *(trks->ptr++);
+  c = ch_advance(trks);
+  while (c && c != ':') c = ch_advance(trks);
 }
 
 static setvol(trk_data *trks)
@@ -674,18 +697,17 @@ static setvel(trk_data *trks)
 
 static void setmeter(trk_data *trks)
 {
-  /*  =meter:3/4  */
   short n = 0;
   short d = 2;
-  
+  unsigned char c;  
   unsigned char data[4];
   
   skipctrl(trks);
   n = getnum(trks);  
   if ( n == 0)  n=4;
 
-  if (*(trks->ptr) == '/') {
-    trks->ptr++;
+  if (ch_current(trks) == '/') {
+    c = ch_advance(trks);
     d = getnum(trks);  
     switch (d) {
       case   2: d = 1; break;
@@ -791,7 +813,7 @@ unsigned char *keyroot =
        "\x0B\x06\x01\x08\x03\x0A\x06\x00\x07\x02\x09\x04\x0B\x06\x01"
        "\x08\x03\x0A\x05\x00\x07\x02\x09\x04\x0B\x06\x01\x08\x03\x0A";
       /* Ab  Eb  Bb  F   C   G   D   A   E   B   F#  C#  G#  D#  A# */
-      /* 0   1   2   3   4   5   6   7   8   9   10  11  12  13  14 */
+      /*-7  -6  -5  -4  -3  -2  -1   0   1   2   3   4   5   6   7  */
     
 #define NO_KEY 100
 
@@ -806,26 +828,27 @@ static setkey(trk_data *trks)
   unsigned char data[4];
   unsigned char *p = NULL;
   unsigned char *q = NULL;
+  unsigned char c;
   
   skipctrl(trks);
   
-  p = trks->ptr;
+  p = ptr_current(trks);
   
   if (*p == '+' || *p == '-' || isdigit(*p)) {
     n = getnum(trks);  
   }
   else if ('A' <= *p && *p <= 'G') {
-    r = *(trks->ptr++) - 'A';
-    a = *(trks->ptr++);
+    r = ch_advance(trks) - 'A';
+    a = ch_advance(trks);
     if (a == 'b') a = -1;
     else if (a == '#') a = 1;
-    else { a = 0;  trks->ptr--;  }
+    else { a = 0;  ch_unget(trks);  }
   }
 
-  p = trks->ptr;
+  p = ptr_current(trks);
   if (*p == ':') {
-    trks->ptr++;
-    p = trks->ptr;
+    c = ch_advance(trks);
+    p = ptr_current(trks);
     q = getscale(p);
     _dbgmsg("KEY: %.3s %p\n",p,q);
   }
@@ -871,21 +894,21 @@ static void setinstr(trk_data *trks)
   
   skipctrl(trks);
   
-  c = *(trks->ptr);
+  c = ch_current(trks);
   if ('0' <= c && c <= '9') {
     n = getnum(trks);
   } 
   else {
-    c = *(trks->ptr++);
+    c = ch_advance(trks);
     while (c && isalnum(c) && k<30) {
       iname[k++] = c;
-      c = *(trks->ptr++);
+      c = ch_advance(trks);
     }
     iname[k] = '\0';
     while (c && isalnum(c)) {
-      c = *(trks->ptr++);
+      c = ch_advance(trks);
     }
-    trks->ptr--;
+    ch_unget(trks);
 
     n = mf_instrbyname(iname);
   }
@@ -893,8 +916,7 @@ static void setinstr(trk_data *trks)
     trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_program_change, trks->chan[trks->track], n, 0);
     if (!trks->err && k>0) 
       trks->err = mf_seq_sys(trks->ms,  trks->tick[trks->track], st_meta_event, me_instrument_name, k, iname);
-  }    
-  
+  }
 }
 
 static void ctrl(trk_data *trks)
@@ -902,15 +924,15 @@ static void ctrl(trk_data *trks)
   unsigned char  c;
   unsigned char *p;
   
-  c = *(trks->ptr++);
-  p = trks->ptr;
+  c = ch_advance(trks);
+  p = ptr_current(trks);
   c = *p;
 
   _dbgmsg("CTRL: [%c]\n",c);
   
   if ( '1' <= c && c <= '9') {
     trks->chan[trks->track] = (c-'1');  
-    trks->ptr++;
+    c = ch_advance(trks);
   }
   else if (strncmp(p,"meter:",6) == 0)    { setmeter(trks); }
   else if (strncmp(p,"key:"  ,4) == 0)    { setkey(trks); } 
@@ -920,19 +942,17 @@ static void ctrl(trk_data *trks)
   else if (strncmp(p,"vel:"  ,4) == 0)    { setvel(trks); }
   else if (strncmp(p,"instr:",6) == 0)    { setinstr(trks); }
   else { skipctrl(trks); skiparg(trks); }
-  
 }
 
 static void defvalue(trk_data *trks)
 {
   unsigned char c;
    
-  c = *(trks->ptr++); /* skip ':' */
-  c = *(trks->ptr);
+  c = ch_advance(trks); /* skip ':' */
+  c = ch_current(trks);
   _dbgmsg("DEFV: [%c]\n",c);
   if (!c || isspace(c)) return;
   getnote(trks,0);
-   
 }  
 
 static void gettxt(trk_data *trks)
@@ -944,16 +964,17 @@ static void gettxt(trk_data *trks)
    short e;
    unsigned long dur;
    
-   q = *(trks->ptr++);
-   data = trks->ptr;
-   c = *(trks->ptr++);
+   q = ch_advance(trks);
+   data = ptr_current(trks);
+   c = ch_advance(trks);
+   
    while (c && c != q) {
      _dbgmsg("C: %d [%c]\n",n,c);
-     if (c == '\\' && *(trks->ptr)) { n++; trks->ptr++; }
-     c = *(trks->ptr++);
+     if (c == '\\' && ch_current(trks)) { n++; c = ch_advance(trks); }
+     c = ch_advance(trks);
      n++;
    }
-   if (!c) trks->ptr--;
+   if (!c) ch_unget(trks);
 
    dur = notelen(trks);
 
@@ -971,11 +992,11 @@ static void rptstart(trk_data *trks)
 {
    unsigned char c;
    
-    trks->ptr++;
-    c = *(trks->ptr);
+    c = ch_advance(trks);
+    c = ch_current(trks);
     
     if (c && trks->rpt_top < MAX_REPT) {
-      trks->rpt_pos[trks->rpt_top] = trks->ptr;
+      trks->rpt_pos[trks->rpt_top] = ptr_current(trks);
       trks->rpt_cnt[trks->rpt_top] = -1;
       trks->rpt_top++;
     }
@@ -984,11 +1005,11 @@ static void rptstart(trk_data *trks)
 static void rptskipcnt(trk_data *trks)
 {
    unsigned char c;
-   c = *(trks->ptr);
+   c = ch_current(trks);
    
    if (c == '*') {
-     trks->ptr++;
-     while (isdigit((c = *(trks->ptr)))) {trks->ptr++;}
+     c = ch_advance(trks);
+     while (isdigit((c = ch_current(trks)))) {c = ch_advance(trks);}
    }
 }
 
@@ -997,8 +1018,8 @@ static void rptend(trk_data *trks)
   unsigned char c;
   int k;
   
-  trks->ptr++;       /* skip ) */
-  c = *(trks->ptr);
+  c = ch_advance(trks);     /* skip ) */
+  c = ch_current(trks);
    
   if (trks->rpt_top == 0) {
     rptskipcnt(trks);
@@ -1022,7 +1043,7 @@ static void rptend(trk_data *trks)
       }
       else {
         trks->rpt_cnt[k] = 0;
-        trks->ptr++;
+        c = ch_advance(trks);
         trks->rpt_cnt[k] = getnum(trks)-2;
         if (trks->rpt_cnt[k] >= 0)  { trks->ptr = trks->rpt_pos[k]; }
         else trks->rpt_top--;
@@ -1036,13 +1057,13 @@ static void getlinenum(trk_data *trks)
 {
   unsigned char c;
  
-  trks->ptr++;       /* skip \n */
-  c = *(trks->ptr++);
+  c = ch_advance(trks);       /* skip \n */
+  c = ch_advance(trks);
   if (c == '\t') {
     trks->line = getnum(trks);
-    trks->ptr++;       /* skip ' ' */
+    c = ch_advance(trks);    /* skip ' ' */
   }
-  else trks->ptr--;
+  else ch_unget(trks);
   _dbgmsg("LINE: %d\n",trks->line);
 }
 
@@ -1050,12 +1071,12 @@ static void parse(trk_data *trks)
 {
    unsigned char c;
   
-   while ((c = *(trks->ptr))) {
+   while ((c = ch_current(trks))) {
      _dbgmsg("C: %c\n",c);
      if (('A' <= c && c <= 'G') || ('a' <= c && c <= 'g') ||
          ('0' <= c && c <= '9') || ( c == 'n') || (c == 'N' ) ||
          (c == '$') || ( c == 'x') || (c == 'X' ) )
-                                       { note(trks);     }
+                                       { getnote(trks,1);     }
      else if ( c == 'r' || c == 'R' ||  c == '-')
                                        { rest(trks);     }
      else if ( c == '|' )              { chgtrack(trks); }
@@ -1067,8 +1088,8 @@ static void parse(trk_data *trks)
      else if ( c == ')' )              { rptend(trks); }
      else if ( c == '\'' )             { gettxt(trks); }
      else if ( c == '\n' )             { getlinenum(trks); }
-     else if ( isspace(c) )            { trks->ptr++; }
-     else trks->ptr++;
+     else if ( isspace(c) )            { c = ch_advance(trks); }
+     else c = ch_advance(trks);
    }
 }
 
@@ -1130,7 +1151,7 @@ static int tomidi(char *fname, short division, unsigned char *s)
 
   if (tracks.err) err = tracks.err;
 
-  return err;
+  return tracks.line * 1000 + err;
 }
 
 int mf_score(char *fname, short division, unsigned char *score)
@@ -1139,7 +1160,6 @@ int mf_score(char *fname, short division, unsigned char *score)
   int err;
 
   p = demacro(score, &err);
-
   if (!err) {
     err = tomidi(fname, division, p);
     free(p);
@@ -1152,40 +1172,35 @@ int mf_score(char *fname, short division, unsigned char *score)
 
 #ifdef MF_SCORE_TEST
 
-#define SCORE_BUF_SIZE 10239
+#define SCORE_BUF_SIZE (102400-1)
 unsigned char score_buf[SCORE_BUF_SIZE+1];
 
 int main(int argc, char *argv[])
 {
   unsigned char *s;
   unsigned long k;
-  int err;
+  int err = 0;
   int c;
   FILE *f;
   
-  if (argc < 2) {
-    fprintf(stderr, "ut_score file-in\n");
-    exit (1);
+  if (argc > 1) {
+    f = fopen(argv[1],"r");
+    if (f) {
+      s = score_buf;
+      k = 0;
+      while ( ((c = fgetc(f)) != EOF) && (k < SCORE_BUF_SIZE)) {
+        _dbgmsg("R: %c\n",c);
+        *s++ = c;
+        k++;
+      }
+      *s = '\0';
+       
+      fclose(f); 
+      err = mf_score("sc.mid",384, score_buf);    
+    }
+    else { err = 185; }
   }  
-  
-  f = fopen(argv[1],"r");
-  if (!f) {
-    fprintf(stderr, "Unable to open file\n");
-    exit (1);
-  }
-  
-  s = score_buf;
-  k = 0;
-  while ( ((c = fgetc(f)) != EOF) && (k < SCORE_BUF_SIZE)) {
-    _dbgmsg("R: %c\n",c);
-    *s++ = c;
-    k++;
-  }
-  *s = '\0';
-   
-  fclose(f); 
-   
-  err = mf_score("sc.mid",384, score_buf);
+  else { err = 186; }
   
   if (err) printf("ERR: %d\n",err);
   
