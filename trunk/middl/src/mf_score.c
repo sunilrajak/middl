@@ -782,8 +782,7 @@ static unsigned char *scales[] = {
    "nmn\000\001\002\002\002\001\003",
    "phr\000\001\002\002\002\001\002",
    "pmj\000\002\002\003\002"        ,
-   "pmn\000\003\002\002\003"        ,
-   NULL
+   "pmn\000\003\002\002\003"        
 };
 
 
@@ -804,35 +803,38 @@ static unsigned char *keyacc = "\004\006\001\003\005\000\002";
                                      
 */
 
+static int sc_cmp(const void *a, const void *b)
+{
+  _dbgmsg("SC_CMP: %.3s %.3s\n",*(char**)a, *(char **)b);
+  return strncmp(*(char**)a, *(char **)b,3) ;
+}
+
 static char *getscale(trk_data *trks)
 {
-  unsigned char *q = NULL; 
+  unsigned char **q;
   unsigned char *s = ch_curptr(trks);
 
-  if (s && s[0] && s[1] && s[2]) {
-    q = scales[0];
-    while (q) {
-      if (q && q[0] == s[0] && q[1] == s[1] && q[2] == s[2]) {
-        ch_skip(trks); ch_skip(trks); ch_skip(trks);
-        return q;
-      }
-      q++;
-    }
-      if (!q) {  /* return maj on default */
-        if (s == MAJ) return NULL; /* ??? No major scale found ??? */
-        q = scales[0]; 
-        s = MAJ;
-      }
+  if (!s || !s[0] || !s[1] || !s[2]) return NULL;
+  
+  q = bsearch(&s, scales, sizeof(scales)/sizeof(scales[0]),
+                          sizeof(scales[0]), sc_cmp);
+  if (q) {
+    ch_skip(trks);ch_skip(trks);ch_skip(trks);
   }
-  return q;
+  else {
+    s = "maj";
+    q = bsearch(&s, scales, sizeof(scales)/sizeof(scales[0]),
+                            sizeof(scales[0]), sc_cmp);
+  }
+  return *q;
 }
 
 unsigned char *keyroot =
-      /* Cb  Gb  Db  Ab  Eb  Bb  F   C   G   D   A   E   B  F#   C# */
-       "\x0B\x06\x01\x08\x03\x0A\x06\x00\x07\x02\x09\x04\x0B\x06\x01"
-       "\x08\x03\x0A\x05\x00\x07\x02\x09\x04\x0B\x06\x01\x08\x03\x0A";
-      /* Ab  Eb  Bb  F   C   G   D   A   E   B   F#  C#  G#  D#  A# */
-      /*-7  -6  -5  -4  -3  -2  -1   0   1   2   3   4   5   6   7  */
+    /* Cb  Gb  Db  Ab  Eb  Bb  F   C   G   D   A   E   B  F#   C# */
+     "\x0B\x06\x01\x08\x03\x0A\x06\x00\x07\x02\x09\x04\x0B\x06\x01"
+     "\x08\x03\x0A\x05\x00\x07\x02\x09\x04\x0B\x06\x01\x08\x03\x0A";
+    /* Ab  Eb  Bb  F   C   G   D   A   E   B   F#  C#  G#  D#  A# */
+    /*-7  -6  -5  -4  -3  -2  -1   0   1   2   3   4   5   6   7  */
     
 #define NO_KEY 100
 
@@ -872,7 +874,6 @@ static setkey(trk_data *trks)
   }
   
   m = q[3];
-  _dbgmsg("KEYm %d\n",m);
   
   if (n == NO_KEY) {
     n = keyacc[r]-1;
@@ -882,6 +883,8 @@ static setkey(trk_data *trks)
   
   while (n < -7) n += 12;
   while (n >  7) n -= 12;
+
+  _dbgmsg("KEY %.3s %d %d\n",q,m,n);
 
   trks->scale[0] = keyroot[(7+n)+m*15];
   
