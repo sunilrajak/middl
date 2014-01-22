@@ -520,6 +520,8 @@ static void getnote(trk_data *trks,int play)
     else if (c == 'x')            { n = trks->notes[trks->track][0] % 12; istmp = 1; }
     else if (c == '$' && isdigit(ch_cur(trks)))
                                     n = trks->scale[(ch_get(trks) - '1') % trks->scale_n];
+    else if (c == '#' && isdigit(ch_cur(trks)))
+                                    n = trks->notes[trks->track][1+((ch_get(trks) - '1') % trks->chord_n[trks->track])] % 12;
     else {ch_unget(trks); return ;}
     
     c = ch_get(trks);
@@ -811,22 +813,27 @@ static int sc_cmp(const void *a, const void *b)
 
 static char *getscale(trk_data *trks)
 {
-  unsigned char **q;
+  unsigned char **q = NULL;
   unsigned char *s = ch_curptr(trks);
+  unsigned char c;
 
-  if (!s || !s[0] || !s[1] || !s[2]) return NULL;
+  c = ch_cur(trks);
   
-  q = bsearch(&s, scales, sizeof(scales)/sizeof(scales[0]),
-                          sizeof(scales[0]), sc_cmp);
+  if (c == ':') {
+    ch_skip(trks);
+    q = bsearch(&s, scales, sizeof(scales)/sizeof(scales[0]),
+                            sizeof(scales[0]), sc_cmp);
+  }
   if (q) {
-    ch_skip(trks);ch_skip(trks);ch_skip(trks);
+    ch_skip(trks); ch_skip(trks); ch_skip(trks);
   }
   else {
     s = "maj";
     q = bsearch(&s, scales, sizeof(scales)/sizeof(scales[0]),
                             sizeof(scales[0]), sc_cmp);
   }
-  return *q;
+  if (q)  return *q;
+  else return NULL; ; /* WHAT? Where's my major scale?? */
 }
 
 unsigned char *keyroot =
@@ -868,11 +875,9 @@ static setkey(trk_data *trks)
   }
 
   c = ch_cur(trks);
-  if (c == ':') {
-    ch_skip(trks);
-    q = getscale(trks);
-  }
+  q = getscale(trks);
   
+  if (!q) return; /* ??? */
   m = q[3];
   
   if (n == NO_KEY) {
@@ -1094,16 +1099,16 @@ static void parse(trk_data *trks)
     _dbgmsg("C: %c\n",c);
     if (ispitch(c) || isdigit(c) || 
         (c == '$') || (c == 'N') || (c == 'n') ||
-        (c == 'x') || (c == 'X' ) )               { getnote(trks,1);   }
+        (c == '#') || (c == 'x') || (c == 'X' ) ) { getnote(trks,1);   }
     else if ( c == 'r' || c == 'R' || c == '-')   { rest(trks);        }
     else if ( c == '|' )                          { chgtrack(trks);    }
     else if ( c == '&' )                          { rtarget(trks);     }
     else if ( c == '@' )                          { ctrl(trks);        }
     else if ( c == ':' )                          { defvalue(trks);    }
     else if ( c == '"' )                          { gettxt(trks);      }
+    else if ( c == '\'' )                         { gettxt(trks);      }
     else if ( c == '(' )                          { rptstart(trks);    }
     else if ( c == ')' )                          { rptend(trks);      }
-    else if ( c == '\'' )                         { gettxt(trks);      }
     else if ( c == '\n' )                         { getlinenum(trks);  }
     else if ( isspace(c) )                        { ch_skip(trks);     }
     else ch_skip(trks);
