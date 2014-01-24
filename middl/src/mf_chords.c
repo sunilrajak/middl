@@ -132,7 +132,6 @@ static int chord_cmp(const void *a, const void *b)
     return strcmp(*(char**)a, *(char **)b) ;
 }
 
-
 char *mf_chordbyname(char *name)
 {
    int k;
