@@ -485,6 +485,18 @@ static void getchord(trk_data *trks, short root, int play)
   }
   
 }
+static short getroman(trk_data *trks)
+{
+  short n = 0;
+  unsigned char c;
+  
+  while ((c = ch_cur(trks)) == 'I') { n++;     ch_skip(trks); }
+  if (c == 'V')                     { n = 5-n; ch_skip(trks); }
+  while ((c = ch_cur(trks)) == 'I') { n++;     ch_skip(trks); }
+  if (n <= 0) n = 1;
+  if (n >= 8) n = 7;
+  return n;
+}
 
 static void getnote(trk_data *trks,int play)
 {
@@ -515,9 +527,9 @@ static void getnote(trk_data *trks,int play)
   }
   else {
     if ('A' <= c && c <= 'G')       n = mnotes[c-'A'];
-    else if ('a' <= c && c <= 'g')  n = mnotes[c-'a'];
     else if (c == 'X')              n = trks->notes[trks->track][0] % 12;
     else if (c == 'x')            { n = trks->notes[trks->track][0] % 12; istmp = 1; }
+    else if (c == 'I' || c == 'V')  n = trks->scale[getroman(trks) % trks->scale_n];
     else if (c == '$' && isdigit(ch_cur(trks)))
                                     n = trks->scale[(ch_get(trks) - '1') % trks->scale_n];
     else if (c == '#' && isdigit(ch_cur(trks)))
@@ -620,8 +632,7 @@ static void back(trk_data *trks)
 {
   unsigned char  c;
   
-  c = ch_get(trks);
-  
+  ch_skip(trks);
   c = ch_cur(trks);
   if ( isdigit(c)) {
     trks->tick[trks->track] = trks->trgt[c-'0'];
@@ -640,7 +651,7 @@ static void rtarget(trk_data *trks)
 {
   unsigned char  c;
   
-  c = ch_get(trks);
+  ch_skip(trks);
   c = ch_get(trks);
 
   if (isdigit(c)) {
