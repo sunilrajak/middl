@@ -529,11 +529,11 @@ static void getnote(trk_data *trks,int play)
     if ('A' <= c && c <= 'G')       n = mnotes[c-'A'];
     else if (c == 'X')              n = trks->notes[trks->track][0] % 12;
     else if (c == 'x')            { n = trks->notes[trks->track][0] % 12; istmp = 1; }
-    else if (c == 'I' || c == 'V')  n = trks->scale[getroman(trks) % trks->scale_n];
+    else if (c == 'I' || c == 'V')  n = trks->scale[(getroman(trks) -1 ) % trks->scale_n];
     else if (c == '$' && isdigit(ch_cur(trks)))
-                                    n = trks->scale[(ch_get(trks) - '1') % trks->scale_n];
+            n = trks->scale[(ch_get(trks) - '1') % trks->scale_n];
     else if (c == '#' && isdigit(ch_cur(trks)))
-                                    n = trks->notes[trks->track][1+((ch_get(trks) - '1') % trks->chord_n[trks->track])] % 12;
+            n = trks->notes[trks->track][1+((ch_get(trks) - '1') % trks->chord_n[trks->track])] % 12;
     else {ch_unget(trks); return ;}
     
     c = ch_get(trks);
