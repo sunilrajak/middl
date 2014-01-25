@@ -534,7 +534,7 @@ static void getnote(trk_data *trks,int play)
             n = trks->scale[(ch_get(trks) - '1') % trks->scale_n];
     else if (c == '#' && isdigit(ch_cur(trks)))
             n = trks->notes[trks->track][1+((ch_get(trks) - '1') % trks->chord_n[trks->track])] % 12;
-    else {ch_unget(trks); return ;}
+    else {return ;}
     
     c = ch_get(trks);
     if (c == 'b')      { n--; while ((c = ch_cur(trks)) == 'b')  {n--; c = ch_get(trks);} }
@@ -825,13 +825,14 @@ static int sc_cmp(const void *a, const void *b)
 static char *getscale(trk_data *trks)
 {
   unsigned char **q = NULL;
-  unsigned char *s = ch_curptr(trks);
+  unsigned char *s = NULL;
   unsigned char c;
 
   c = ch_cur(trks);
   
   if (c == ':') {
     ch_skip(trks);
+    s = ch_curptr(trks);
     q = bsearch(&s, scales, sizeof(scales)/sizeof(scales[0]),
                             sizeof(scales[0]), sc_cmp);
   }
@@ -1108,7 +1109,7 @@ static void parse(trk_data *trks)
   
   while ((c = ch_cur(trks))) {
     _dbgmsg("C: %c\n",c);
-    if (ispitch(c) || isdigit(c) || 
+    if (ispitch(c) || isdigit(c) || (c == 'I') || (c == 'V') ||
         (c == '$') || (c == 'N') || (c == 'n') ||
         (c == '#') || (c == 'x') || (c == 'X' ) ) { getnote(trks,1);   }
     else if ( c == 'r' || c == 'R' || c == '-')   { rest(trks);        }
