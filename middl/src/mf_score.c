@@ -14,6 +14,8 @@
 
 #include "mf_seq.h"
 #include "mf_chords.h"
+#include "mf_instr.h"
+#include "mf_errors.h"
 #include <setjmp.h>
 
 #if 1 /*  **** MACRO EXPANSION */
@@ -25,15 +27,15 @@
 
 static int is_idchar(unsigned char c)
 {
-  return (c && (('A' <= c && c <= 'Z') || 
+  return (c && (('A' <= c && c <= 'Z') ||
                 ('a' <= c && c <= 'z') ||
                 (c == '_')) );
 }
 
 static int is_macro_def(unsigned char *q)
 {
-  unsigned char *p=q;
-   while (is_idchar(*q))  q++;             
+
+   while (is_idchar(*q))  q++;
    _dbgmsg("ismacro: [%s][%s]\n",p,q);
    return (*q == '{');
 }
@@ -50,32 +52,32 @@ static int chkmacro(macro_defs *m, unsigned long n)
 {
   unsigned long newmax;
   unsigned char **vec;
-  
+
   if (!m) return 0;
-  
+
   newmax = m->macro_max;
   while (n >= (newmax - m->macro_cnt))
     newmax += MACRO_INCR;
-  
+
   if (newmax > m->macro_max) {
     vec = realloc(m->macro_vec, newmax * sizeof(unsigned char *));
     if (!vec) return 0;
     m->macro_vec = vec;
-    m->macro_max = newmax;    
-  }  
+    m->macro_max = newmax;
+  }
   return (m->macro_vec != NULL);
 }
 
 static unsigned char *skip_identifier(unsigned char *q)
 {
-   while (is_idchar(*q)) q++;             
+   while (is_idchar(*q)) q++;
    return q-1;
 }
 
 static int id_cmp(unsigned char *a,unsigned char *b)
 {
   while (is_idchar(*a) && is_idchar(*b) && (*a == *b)) {a++; b++;}
-  
+
   if (is_idchar(*a) || is_idchar(*b)) return (*a - *b);
   return 0;
 }
@@ -88,7 +90,7 @@ static unsigned char *getmacro(macro_defs *m,unsigned char *p)
      if (id_cmp(m->macro_vec[k] , p) == 0) {
        p = m->macro_vec[k];
        while (*p && *p != '{') p++;
-       return p;       
+       return p;
      }
    }
    return NULL;
@@ -106,19 +108,19 @@ static int chkbuf(charbuf *b, unsigned long n)
 {
   unsigned long newmax;
   unsigned char *buf;
-  
+
   if (!b) return 0;
-  
+
   newmax = b->buf_max;
   while (n >= (newmax - b->buf_cnt))
     newmax += BUF_INCR;
-  
+
   if (newmax > b->buf_max) {
     buf = realloc(b->buf, newmax);
     if (!buf) return 0;
     b->buf = buf;
-    b->buf_max = newmax;    
-  }  
+    b->buf_max = newmax;
+  }
   return (b->buf != NULL);
 }
 
@@ -137,7 +139,7 @@ static unsigned long addlong(charbuf *b, unsigned long n)
 {
   char data[16];
   char *p;
-  sprintf(data,"%u",n);
+  sprintf(data,"%lu",n);
   p=data;
   while (*p) addchar(b,*p++);
   addchar(b,' ');
@@ -153,45 +155,45 @@ static unsigned long addlong(charbuf *b, unsigned long n)
 static unsigned char *demacro(unsigned char *inbuf, int *err)
 {
   macro_defs macros;
-  charbuf buf;  
-  
+  charbuf buf;
+
   unsigned long line = 0;
-  
+
   unsigned char *p = inbuf;
   unsigned char *q;
 
   unsigned char *stk[MAX_STK_TOP];
   unsigned long  stk_ln[MAX_STK_TOP];
   int stk_top = 0;
-  
+
   macros.macro_vec = NULL;
   macros.macro_cnt = 0;
   macros.macro_max = 0;
   *err = 0;
- 
+
   buf.buf = NULL;
   buf.buf_cnt = 0;
   buf.buf_max = 0;
-  
+
   addchar(&buf,'\n');
-  addline(&buf,++line); 
- 
+  addline(&buf,++line);
+
   while (*p) {
     if (*p == '}') {
       if (stk_top == 0) RETURN_ERR(901); /* stray close brace */
       stk_top--;
       p = stk[stk_top];
       line = stk_ln[stk_top];
-      addchar(&buf,'\n'); addline(&buf, line); 
+      addchar(&buf,'\n'); addline(&buf, line);
     } else if (*p == '\t') {
       addchar(&buf,' ');
     } else if (*p == '\r') {
       if (p[1] != '\n') {
-        addchar(&buf,'\n'); 
+        addchar(&buf,'\n');
         if (stk_top == 0) {addline(&buf, ++line); }
       }
     } else if (*p == '\n') {
-      addchar(&buf,'\n'); 
+      addchar(&buf,'\n');
       if (stk_top == 0) { addline(&buf, ++line);  }
     } else if (*p == '{') {
       RETURN_ERR(903);                   /* stray open brace */
@@ -203,7 +205,7 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
       }
       else if (isdigit(p[1])) {
          if (p[1] == '0') RETURN_ERR(904);
-         addchar(&buf,'$'); addchar(&buf,p[1]); 
+         addchar(&buf,'$'); addchar(&buf,p[1]);
          p++;
       }
       else if (is_macro_def(p+1)) {
@@ -233,15 +235,15 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
     else if (*p == '%') { /* strip Comment */
       while (*p && *p != '\r' && *p != '\n') p++;
       if (*p == '\r' && p[1] == '\n') p++;
-      addchar(&buf,'\n'); addline(&buf, ++line); 
+      addchar(&buf,'\n'); addline(&buf, ++line);
     }
     else  addchar(&buf,*p);
 
-    if (*p) p++;    
-  }  
+    if (*p) p++;
+  }
   addchar(&buf,'\n');
-  addline(&buf, ++line); 
-  
+  addline(&buf, ++line);
+
   #if 0
   fprintf(stderr,"%s",buf.buf);
   dbgmsg("macros: %d\n", macros.macro_cnt);
@@ -252,10 +254,10 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
     }
   }
   #endif
-  return buf.buf; 
+  return buf.buf;
 }
 
-#endif /* */ 
+#endif /* */
 
 #if 1 /*  **** PARSING */
 
@@ -266,32 +268,42 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
 #define MAX_CHORDN  16
 #define DUR_INFINITE 0xFFFFFFFF
 
+#define SCORE_FAIL(t,e) ((t)->err = (e), longjmp((t)->errjmp, (e)))
+
+#define FLG_RAWCHORD 1
+#define flg_set(x,f)  ((x)->flags |=  (f))
+#define flg_clr(x,f)  ((x)->flags &= ~(f))
+#define flg_chk(x,f)  ((x)->flags & (f))
+
 typedef struct { /* trk_data */
   mf_seq *ms;
   unsigned char *buf;
   unsigned char *ptr;
   unsigned long line;
   jmp_buf errjmp;
+  unsigned long flags;
   short ppqn;
-  
+
   short track;
   short err;
-  
+
   short num;
   short den;
-  
+
+  short lastnote;
+
   short rpt_top;
   unsigned char *rpt_pos[MAX_REPT];
            short rpt_cnt[MAX_REPT];
 
-  unsigned long  trgt[MAX_TRGT];
-           
-  unsigned long  trgt_r[MAX_TRGT];
-           short trgt_n;
+  unsigned long     trgt[MAX_TRGT];
 
-  unsigned char  scale[MAX_SCALE];
+  unsigned long   trgt_r[MAX_TRGT];
+           short  trgt_n;
+
+  unsigned char    scale[MAX_SCALE];
   unsigned short scale_n;
-  
+
   unsigned long    tick[MAX_TRACKS];
   unsigned long     dur[MAX_TRACKS];
   unsigned char   notes[MAX_TRACKS][MAX_CHORDN];
@@ -301,17 +313,14 @@ typedef struct { /* trk_data */
   unsigned char     vol[MAX_TRACKS];
 } trk_data;
 
-static unsigned char *mnotes = "\x09\x0B\x00\x02\x04\x05\x07";
+static unsigned char *mnotes = (unsigned char *)"\x09\x0B\x00\x02\x04\x05\x07";
 
 static short in_127(short n)
 {
-  while (n < 0)    { n += 12; } 
-  while (n > 127)  { n -= 12; } 
+  while (n < 0)    { n += 12; }
+  while (n > 127)  { n -= 12; }
   return n;
 }
-
-static unsigned char ch_current(trk_data *trks)
-{ return *(trks->ptr); }
 
 static unsigned char ch_next(trk_data *trks)
 { trks->ptr++; return *(trks->ptr); }
@@ -340,6 +349,24 @@ static unsigned char ch_ahead(trk_data *trks)
 
 #define ispitch(c) (ispitchU(c) || ispitchL(c))
 
+static void addnote(trk_data *trks, short n, short dur, short play)
+{
+  trks->lastnote = n;
+  if (play) {
+    if (dur != 0) {
+      trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_on, trks->chan[trks->track],
+                                             n, trks->vol[trks->track]);
+    }
+    _dbgmsg("TICK: %d DUR: %d\n",  trks->tick[trks->track], dur);
+    if (dur != DUR_INFINITE) {
+      trks->tick[trks->track] += dur;
+      trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_off, trks->chan[trks->track],
+                                             n, 0);
+    }
+  }
+}
+
+
 static unsigned long notelen(trk_data *trks)
 {
   unsigned char c;
@@ -351,9 +378,9 @@ static unsigned long notelen(trk_data *trks)
   c = ch_get(trks);
   dur = trks->dur[trks->track];
   if ( c == '/') {
-    
+
     c = ch_get(trks);
-    
+
     if (c == '+') {
       dur = DUR_INFINITE;
       c = ch_get(trks);
@@ -364,7 +391,7 @@ static unsigned long notelen(trk_data *trks)
     }
     else {
       dur = (trks->ppqn * 4);
-      
+
       switch (c) {
         case 'w' : dur = (trks->ppqn * 4) ; c = ch_get(trks); break;
         case 'h' : dur = (trks->ppqn * 2) ; c = ch_get(trks); break;
@@ -373,25 +400,25 @@ static unsigned long notelen(trk_data *trks)
         case 's' : dur = (trks->ppqn / 4) ; c = ch_get(trks); break;
         case 't' : dur = (trks->ppqn / 8) ; c = ch_get(trks); break;
       }
-      
+
       while ('0' <= c && c <= '9') {
-        div = div * 10 + (c -'0');  
+        div = div * 10 + (c -'0');
         c = ch_get(trks);
       }
       if (div == 0) div = 1;
-      
+
       if (c == '*') {
         c = ch_get(trks);
         while ('0' <= c && c <= '9') {
-          mul = mul * 10 + (c -'0');  
+          mul = mul * 10 + (c -'0');
           c = ch_get(trks);
         }
       }
       if (mul == 0) mul = 1;
-      
+
       dur = dur * mul;
       dur = dur / div;
-      
+
       trks->dur[trks->track] = dur;
     }
   }
@@ -400,9 +427,9 @@ static unsigned long notelen(trk_data *trks)
     if (c == '=') dur += tmp;
     c = ch_get(trks) ;
   }
-  
+
   ch_unget(trks);
-  
+
   return dur;
 }
 
@@ -413,36 +440,40 @@ static int getnum(trk_data *trks)
   short d = 1;
 
   c = ch_cur(trks);
-  
+
   if ((c == '+' || c == '-')  && !isdigit(ch_ahead(trks))) return 0;
-   
+
   if (c == '+')      { c = ch_get(trks);         }
   else if (c == '-') { c = ch_get(trks); d = -1; }
-  
-  while ((c = ch_cur(trks)) && '0' <= c && c <= '9') {
+
+  while ((c = ch_cur(trks)) && isdigit(c)) {
     n = n * 10 + (c - '0');
     c = ch_get(trks);
   }
-   
-  return n * d; 
+
+  return n * d;
 }
 
 static void getchord(trk_data *trks, short root, int play)
 {
   unsigned long dur;
+  unsigned long tck;
   unsigned char c;
   char *q;
   unsigned char inv=0;
   short k;
+  short l;
   short n;
-  
+
   c = ch_get(trks); /* skip '[' */
   _dbgmsg("GCH1: %s\n",ch_curptr(trks));
-  
-  q = mf_chordbyname(ch_curptr(trks));
-  
+
+  q = mf_chordbyname((char *)ch_curptr(trks));
+
+  if (!q) SCORE_FAIL(trks,901);
+
   _dbgmsg("GCH2: %p\n",q);
-  
+
   /* look for inversion */
   while ( (c = ch_cur(trks)) && c != ']' && c != ':') c = ch_get(trks);
   if (c == ':') {
@@ -454,10 +485,10 @@ static void getchord(trk_data *trks, short root, int play)
   while ( (c = ch_cur(trks)) && c != ']')
     c = ch_get(trks);
   if (c) c = ch_get(trks);;
-  
+
   if (q) {        /* chord found */
     if (root < 0) root = trks->notes[trks->track][0];
-   
+
     trks->notes[trks->track][1] = root;
     for(k=2; *q && k < MAX_CHORDN; q++, k++) {
       n = trks->notes[trks->track][k-1] + *q;
@@ -466,33 +497,39 @@ static void getchord(trk_data *trks, short root, int play)
     }
     trks->chord_n[trks->track] = k-1;
     dur = notelen(trks);
-    if (play) {
-      n = trks->chord_n[trks->track];
-      if (dur != 0) {
-        for (k=1; k<=n; k++) {
-          trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_on, trks->chan[trks->track],
-                                                 trks->notes[trks->track][k], trks->vol[trks->track]);
-        }
-      }
-      if (dur != DUR_INFINITE) {
-        trks->tick[trks->track] += dur;
-        for (k=1; k<=n; k++) {
-          trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_off, trks->chan[trks->track],
-                                                 trks->notes[trks->track][k], 0);
-        }  
-      }
+    l = trks->chord_n[trks->track];
+    tck = trks->tick[trks->track];
+    for (k = 1; k <= l; k++) {
+      n = trks->notes[trks->track][k];
+      trks->tick[trks->track] = tck;
+      addnote(trks, n, dur, play);
     }
   }
-  
 }
-static short getroman(trk_data *trks)
+
+static void rawchord_start(trk_data *trks)
+{
+  ch_skip(trks);
+  if (flg_chk(trks, FLG_RAWCHORD)) SCORE_FAIL(trks,905);
+  flg_set(trks,FLG_RAWCHORD);
+  trks->chord_n[trks->track] = 0;
+}
+
+static void rawchord_end(trk_data *trks)
+{
+  ch_skip(trks);
+  if (!flg_chk(trks, FLG_RAWCHORD)) SCORE_FAIL(trks,905);
+  flg_clr(trks,FLG_RAWCHORD);
+}
+
+static short getroman(trk_data *trks,  unsigned char c)
 {
   short n = 0;
-  unsigned char c;
-  
-  while ((c = ch_cur(trks)) == 'I') { n++;     ch_skip(trks); }
-  if (c == 'V')                     { n = 5-n; ch_skip(trks); }
-  while ((c = ch_cur(trks)) == 'I') { n++;     ch_skip(trks); }
+
+  while (c == 'I')  { n++;     c = ch_get(trks); }
+  if (c == 'V')     { n = 5-n; c = ch_get(trks); }
+  while ( c == 'I') { n++;     c = ch_get(trks); }
+  ch_unget(trks);
   if (n <= 0) n = 1;
   if (n >= 8) n = 7;
   return n;
@@ -506,9 +543,9 @@ static void getnote(trk_data *trks,int play)
   short cur_oct = 0;
   short tmp_oct = 0;
   unsigned long dur;
-  
+
   c = ch_get(trks);
-  
+
   if (isdigit(c)) {
     ch_unget(trks);
     n = getnum(trks) + trks->notes[trks->track][0];
@@ -527,20 +564,22 @@ static void getnote(trk_data *trks,int play)
   }
   else {
     if ('A' <= c && c <= 'G')       n = mnotes[c-'A'];
-    else if (c == 'X')              n = trks->notes[trks->track][0] % 12;
-    else if (c == 'x')            { n = trks->notes[trks->track][0] % 12; istmp = 1; }
-    else if (c == 'I' || c == 'V')  n = trks->scale[(getroman(trks) -1 ) % trks->scale_n];
+    else if (c == 'X')              n = trks->notes[trks->track][0];
+    else if (c == 'x')            { n = trks->notes[trks->track][0]; istmp = 1; }
+    else if (c == 'I' || c == 'V')  n = trks->scale[(getroman(trks,c)-1 ) % trks->scale_n];
     else if (c == '$' && isdigit(ch_cur(trks)))
             n = trks->scale[(ch_get(trks) - '1') % trks->scale_n];
     else if (c == '#' && isdigit(ch_cur(trks)))
-            n = trks->notes[trks->track][1+((ch_get(trks) - '1') % trks->chord_n[trks->track])] % 12;
-    else {return ;}
-    
+            n = trks->notes[trks->track][1+((ch_get(trks) - '1') % trks->chord_n[trks->track])];
+    else {SCORE_FAIL(trks,999) ;}
+
+    n = n % 12;
+
     c = ch_get(trks);
     if (c == 'b')      { n--; while ((c = ch_cur(trks)) == 'b')  {n--; c = ch_get(trks);} }
     else if (c == '#') { n++; while ((c = ch_cur(trks)) == '#')  {n++; c = ch_get(trks);} }
     else ch_unget(trks);
-    
+
     cur_oct = trks->notes[trks->track][0] / 12;
     c = ch_get(trks);
     if ('0' <= c && c <= '9')  { cur_oct = c-'0'+1; }
@@ -548,14 +587,14 @@ static void getnote(trk_data *trks,int play)
     else if ( c == '\'')       { tmp_oct++; while ((c = ch_cur(trks)) == '\'')  {tmp_oct++; c = ch_get(trks);} }
     else if ( c == ',')        { tmp_oct--; while ((c = ch_cur(trks)) == ',')   {tmp_oct--; c = ch_get(trks);} }
     else ch_unget(trks);
-    
-    n += cur_oct * 12;   
+
+    n += cur_oct * 12;
   }
 
   n = in_127(n);
 
   if (!istmp) trks->notes[trks->track][0] = n;
-  
+
   n += tmp_oct * 12;
 
   n = in_127(n);
@@ -564,20 +603,7 @@ static void getnote(trk_data *trks,int play)
     getchord(trks, n, play);
   }
   else {
-    dur = notelen(trks);
-    
-    if (play) {
-      if (dur != 0) {
-        trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_on, trks->chan[trks->track],
-                                               n, trks->vol[trks->track]);
-      }
-      _dbgmsg("TICK: %d DUR: %d\n",  trks->tick[trks->track], dur);
-      if (dur != DUR_INFINITE) {
-        trks->tick[trks->track] += dur;
-        trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_off, trks->chan[trks->track],
-                                               n, 0);
-      }  
-    }
+    addnote(trks, n, notelen(trks), play);
   }
 }
 
@@ -586,7 +612,7 @@ static void rest(trk_data *trks)
   unsigned char c;
   unsigned long dur;
   unsigned short mul = 0;
-  
+
   if ((c = ch_cur(trks)) == '-') {
     for(;;) {
      c = ch_get(trks);
@@ -598,32 +624,31 @@ static void rest(trk_data *trks)
   else {
     c = ch_get(trks);
     dur = notelen(trks);
-   
+
     if (dur == 0 || c == 'r') {
       trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_off, trks->chan[trks->track],
                                             trks->notes[trks->track][0], 0);
     }
   }
-  
-  if (dur != DUR_INFINITE) {  trks->tick[trks->track] += dur; }  
+
+  if (dur != DUR_INFINITE) {  trks->tick[trks->track] += dur; }
 }
 
 static void chgtrack(trk_data *trks)
 {
-  unsigned char  c;
   unsigned short trk;
-  
-  c = ch_get(trks); /* skip '|' */
-  
+
+  ch_skip(trks); /* skip '|' */
+
   if (isdigit(ch_cur(trks)))  trk = getnum(trks);
-  else trk = trks->track+1; 
-  
+  else trk = trks->track+1;
+
   if (trk < 0) trk = 0;
   else if (MAX_TRACKS <= trk) trk = MAX_TRACKS-1;
-  
+
   trks->track = trk;
   mf_seq_set_track(trks->ms, trk);
-  
+
 }
 
 #if 1/* *** REPEAT */
@@ -631,7 +656,7 @@ static void chgtrack(trk_data *trks)
 static void back(trk_data *trks)
 {
   unsigned char  c;
-  
+
   ch_skip(trks);
   c = ch_cur(trks);
   if ( isdigit(c)) {
@@ -641,7 +666,7 @@ static void back(trk_data *trks)
   else if (trks->dur[trks->track] != DUR_INFINITE) {
     if (trks->tick[trks->track] < trks->dur[trks->track])
       trks->tick[trks->track] = 0;
-    else 
+    else
       trks->tick[trks->track] -= trks->dur[trks->track];
   }
   _dbgmsg("BACK TO: %d\n", trks->tick[trks->track]);
@@ -650,7 +675,7 @@ static void back(trk_data *trks)
 static void rtarget(trk_data *trks)
 {
   unsigned char  c;
-  
+
   ch_skip(trks);
   c = ch_get(trks);
 
@@ -676,8 +701,16 @@ static void rtarget(trk_data *trks)
     }
     else {ch_unget(trks) ; back(trks);}
   }
-  else {trks->ptr -=2 ; back(trks);}
-  
+  else {
+    if (flg_chk(trks, FLG_RAWCHORD)) {
+      if ( trks->chord_n[trks->track] >= MAX_CHORDN-1) SCORE_FAIL(trks,905);
+      trks->chord_n[trks->track]++;
+      trks->notes[trks->track][trks->chord_n[trks->track]] = trks->lastnote;
+    }
+    trks->ptr -=2 ;
+    back(trks);
+  }
+
 }
 #endif /**/
 
@@ -694,9 +727,9 @@ static void skiparg(trk_data *trks)
       if (c) { c = ch_get(trks); }
    }
    else {
-     while (c && !isspace(c)) c = ch_get(trks); 
+     while (c && !isspace(c)) c = ch_get(trks);
    }
-   
+
 }
 
 static void skipctrl(trk_data *trks)
@@ -706,61 +739,61 @@ static void skipctrl(trk_data *trks)
   while (c && c != ':') c = ch_get(trks);
 }
 
-static setvol(trk_data *trks)
+static void setvol(trk_data *trks)
 {
 }
 
-static setvel(trk_data *trks)
+static void setvel(trk_data *trks)
 {
   short n = 0;
   skipctrl(trks);
   n = getnum(trks);
-  trks->vol[trks->track] = n;  
+  trks->vol[trks->track] = n;
 }
 
 static void setmeter(trk_data *trks)
 {
   short n = 0;
   short d = 2;
-  unsigned char c;  
+
   unsigned char data[4];
-  
+
   skipctrl(trks);
-  n = getnum(trks);  
+  n = getnum(trks);
   if ( n == 0)  n=4;
 
   if (ch_cur(trks) == '/') {
-    c = ch_get(trks);
-    d = getnum(trks);  
+    ch_skip(trks);
+    d = getnum(trks);
     switch (d) {
       case   2: d = 1; break;
       case   4: d = 2; break;
       case   8: d = 3; break;
       case  16: d = 4; break;
       case  32: d = 5; break;
-      default : d = 2; 
+      default : d = 2;
     }
   }
 
   trks->num = n;
   trks->den = d;
-  
+
   data[0] = n; data[1]= d; data[2] = 24; data[3] = 8;
-  
+
   mf_seq_set_track(trks->ms, 0);
   trks->err = mf_seq_sys(trks->ms,  trks->tick[trks->track], st_meta_event, me_time_signature, 4, data);
   mf_seq_set_track(trks->ms, trks->track);
- 
+
 }
 
 static void setbpm(trk_data *trks)
 {
   unsigned char data[4];
   unsigned long tempo;
-  
+
   skipctrl(trks);
-  tempo = getnum(trks);  
-  
+  tempo = getnum(trks);
+
   if ( tempo <= 0)  tempo=90;
 
   _dbgmsg("TEMPO: %d ",tempo);
@@ -778,42 +811,42 @@ static void setbpm(trk_data *trks)
 
 #if 1 /* *** SET KEY AND SCALE */
 
-static unsigned char *scales[] = {
+static char *scales[] = {
 /*  name minor? scale
      /   /  ____/\________________
     / \ / \/                      \   */
-   "aeo\001\002\001\002\002\001\002", 
-   "dor\000\002\001\002\002\002\001",
-   "har\000\002\001\002\002\001\003",
+   "aeo\001\002\001\002\002\001\002",
+   "dor\001\002\001\002\002\002\001",
+   "har\001\002\001\002\002\001\003",
    "ion\000\002\002\001\002\002\002",
-   "loc\000\001\002\002\001\002\002",
+   "loc\001\001\002\002\001\002\002",
    "lyd\000\002\002\002\001\002\002",
    "maj\000\002\002\001\002\002\002",
    "min\001\002\001\002\002\001\002",
    "mix\000\002\002\001\002\002\001",
    "nmj\000\001\002\002\002\002\002",
-   "nmn\000\001\002\002\002\001\003",
-   "phr\000\001\002\002\002\001\002",
+   "nmn\001\001\002\002\002\001\003",
+   "phr\001\001\002\002\002\001\002",
    "pmj\000\002\002\003\002"        ,
-   "pmn\000\003\002\002\003"        
+   "pmn\001\003\002\002\003"
 };
 
 
 /* see  http://www.musictheory.net/lessons/25 */
                                /* A   B   C   D   E   F   G */
-static unsigned char *keyacc = "\004\006\001\003\005\000\002";
+static char *keyacc = "\004\006\001\003\005\000\002";
 /*          maj        #         10   12  7   9   11   6   8
                                  -2   0      -3   -1      -4
-                                 
-            min        #          7   9   4   6    8   3   5        
-                                     -3           -4                
+
+            min        #          7   9   4   6    8   3   5
+                                     -3           -4
 
             maj        b         -4  -2  -7  -5   -3  -8  -6
                                                        4
-                                                      
+
             min        b         -7  -5 -10  -8   -6 -11  -9
                                           2   4        1   3
-                                     
+
 */
 
 static int sc_cmp(const void *a, const void *b)
@@ -824,12 +857,12 @@ static int sc_cmp(const void *a, const void *b)
 
 static char *getscale(trk_data *trks)
 {
-  unsigned char **q = NULL;
+  char **q = NULL;
   unsigned char *s = NULL;
   unsigned char c;
 
   c = ch_cur(trks);
-  
+
   if (c == ':') {
     ch_skip(trks);
     s = ch_curptr(trks);
@@ -840,12 +873,12 @@ static char *getscale(trk_data *trks)
     ch_skip(trks); ch_skip(trks); ch_skip(trks);
   }
   else {
-    s = "maj";
+    s = (unsigned char *)"maj";
     q = bsearch(&s, scales, sizeof(scales)/sizeof(scales[0]),
                             sizeof(scales[0]), sc_cmp);
   }
   if (q)  return *q;
-  else return NULL; ; /* WHAT? Where's my major scale?? */
+  SCORE_FAIL(trks,999); ; /* WHAT? Where's my major scale?? */
 }
 
 unsigned char *keyroot =
@@ -854,11 +887,11 @@ unsigned char *keyroot =
      "\x08\x03\x0A\x05\x00\x07\x02\x09\x04\x0B\x06\x01\x08\x03\x0A";
     /* Ab  Eb  Bb  F   C   G   D   A   E   B   F#  C#  G#  D#  A# */
     /*-7  -6  -5  -4  -3  -2  -1   0   1   2   3   4   5   6   7  */
-    
+
 #define NO_KEY 100
 
 static setkey(trk_data *trks)
-{ 
+{
   /*  @key:+3:min  @key:Db:min */
   short n = NO_KEY;
   short m = 0;
@@ -869,57 +902,57 @@ static setkey(trk_data *trks)
   unsigned char *p = NULL;
   unsigned char *q = NULL;
   unsigned char c;
-  
+
   skipctrl(trks);
-  
+
   c = ch_cur(trks);
-  
+
   if (c == '+' || c == '-' || isdigit(c)) {
-    n = getnum(trks);  
+    n = getnum(trks);
   }
   else if (ispitchU(c)) {
     r = ch_get(trks) - 'A';
     switch(ch_get(trks)) {
       case 'b' : a = -1; break;
       case '#' : a =  1; break;
-      default  : ch_unget(trks); 
+      default  : ch_unget(trks);
     }
   }
 
   c = ch_cur(trks);
   q = getscale(trks);
-  
+
   if (!q) return; /* ??? */
   m = q[3];
-  
+
   if (n == NO_KEY) {
     n = keyacc[r]-1;
     n += a * 7;
     n -= m * 3;
-  } 
-  
+  }
+
   while (n < -7) n += 12;
   while (n >  7) n -= 12;
 
   _dbgmsg("KEY %.3s %d %d\n",q,m,n);
 
   trks->scale[0] = keyroot[(7+n)+m*15];
-  
+
   for (k=1, q += 4; *q && k < MAX_SCALE; k++,q++) {
     trks->scale[k] = trks->scale[k-1] + *q;
   }
   trks->scale_n = k+1;
-  
+
   _dbgmsg("Key: r=%d a=%d m=%d n=%d p=[%s]\n",r,a,m,n,p);
 
   data[0] = n; data[1] = m;
-  
+
   mf_seq_set_track(trks->ms, 0);
   trks->err = mf_seq_sys(trks->ms,  trks->tick[trks->track], st_meta_event, me_key_signature, 2, data);
   mf_seq_set_track(trks->ms, trks->track);
 }
 
-#endif /**/ 
+#endif /**/
 
 static void setinstr(trk_data *trks)
 {
@@ -927,13 +960,13 @@ static void setinstr(trk_data *trks)
   short n = -1;
   char iname[32];
   short k = 0;
-  
+
   skipctrl(trks);
-  
+
   c = ch_cur(trks);
   if (isdigit(c)) {
     n = getnum(trks);
-  } 
+  }
   else {
     c = ch_get(trks);
     while (c && isalnum(c) && k<30) {
@@ -948,48 +981,50 @@ static void setinstr(trk_data *trks)
 
     n = mf_instrbyname(iname);
   }
-  if (n >= 0) {
-    trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_program_change, trks->chan[trks->track], n, 0);
-    if (!trks->err && k>0) 
-      trks->err = mf_seq_sys(trks->ms,  trks->tick[trks->track], st_meta_event, me_instrument_name, k, iname);
-  }
+
+  if (n<0) SCORE_FAIL(trks, 903);
+
+
+  trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_program_change, trks->chan[trks->track], n, 0);
+  if (!trks->err && k>0)
+    trks->err = mf_seq_sys(trks->ms,  trks->tick[trks->track], st_meta_event, me_instrument_name, k, iname);
 }
 
 static void ctrl(trk_data *trks)
 {
   unsigned char  c;
-  unsigned char *p;
-  
+  char *p;
+
   ch_skip(trks);
-  p = ch_curptr(trks);
+  p = (char *)ch_curptr(trks);
   c = ch_cur(trks);
 
   _dbgmsg("CTRL: [%c]\n",c);
-  
+
   if ( '1' <= c && c <= '9') {
-    trks->chan[trks->track] = (c-'1');  
+    trks->chan[trks->track] = (c-'1');
     c = ch_get(trks);
   }
   else if (strncmp(p,"meter:",6) == 0)    { setmeter(trks); }
-  else if (strncmp(p,"key:"  ,4) == 0)    { setkey(trks);   } 
-  else if (strncmp(p,"bpm:"  ,4) == 0)    { setbpm(trks);   } 
-  else if (strncmp(p,"pan:"  ,4) == 0)    {  } 
+  else if (strncmp(p,"key:"  ,4) == 0)    { setkey(trks);   }
+  else if (strncmp(p,"bpm:"  ,4) == 0)    { setbpm(trks);   }
+  else if (strncmp(p,"pan:"  ,4) == 0)    {  }
   else if (strncmp(p,"vol:"  ,4) == 0)    { setvol(trks);   }
   else if (strncmp(p,"vel:"  ,4) == 0)    { setvel(trks);   }
   else if (strncmp(p,"instr:",6) == 0)    { setinstr(trks); }
-  else { skipctrl(trks); skiparg(trks); }
+  else { SCORE_FAIL(trks,902); }
 }
 
 static void defvalue(trk_data *trks)
 {
   unsigned char c;
-   
+
   ch_skip(trks);        /* skip ':' */
   c = ch_cur(trks);
   _dbgmsg("DEFV: [%c]\n",c);
   if (!c || isspace(c)) return;
   getnote(trks,0);
-}  
+}
 
 static void gettxt(trk_data *trks)
 {
@@ -999,11 +1034,11 @@ static void gettxt(trk_data *trks)
    unsigned char *data;
    short e;
    unsigned long dur;
-   
+
    q = ch_get(trks);
    data = ch_curptr(trks);
    c = ch_get(trks);
-   
+
    while (c && c != q) {
      _dbgmsg("C: %d [%c]\n",n,c);
      if (c == '\\' && ch_cur(trks)) { n++; c = ch_get(trks); }
@@ -1019,7 +1054,7 @@ static void gettxt(trk_data *trks)
    mf_seq_sys(trks->ms,  trks->tick[trks->track], st_meta_event, e, n, data);
    if (dur != DUR_INFINITE) {
      trks->tick[trks->track] += dur;
-   }  
+   }
 }
 
 #if 1 /* REPEAT */
@@ -1027,10 +1062,10 @@ static void gettxt(trk_data *trks)
 static void rptstart(trk_data *trks)
 {
    unsigned char c;
-   
+
     c = ch_get(trks);
     c = ch_cur(trks);
-    
+
     if (c && trks->rpt_top < MAX_REPT) {
       trks->rpt_pos[trks->rpt_top] = ch_curptr(trks);
       trks->rpt_cnt[trks->rpt_top] = -1;
@@ -1042,7 +1077,7 @@ static void rptskipcnt(trk_data *trks)
 {
    unsigned char c;
    c = ch_cur(trks);
-   
+
    if (c == '*') {
      c = ch_get(trks);
      while (isdigit((c = ch_cur(trks)))) {c = ch_get(trks);}
@@ -1053,17 +1088,17 @@ static void rptend(trk_data *trks)
 {
   unsigned char c;
   int k;
-  
+
   c = ch_get(trks);     /* skip ) */
   c = ch_cur(trks);
-   
+
   if (trks->rpt_top == 0) {
     rptskipcnt(trks);
     return;
   }
-        
+
   k =  trks->rpt_top - 1;
-    
+
   if (trks->rpt_cnt[k] > 0) { /* we are repeating */
     trks->ptr = trks->rpt_pos[k];
     trks->rpt_cnt[k]--;
@@ -1075,7 +1110,7 @@ static void rptend(trk_data *trks)
   else {  /* that was the first repetition (set cnt) */
     if (c == '*') {
       if (trks->rpt_top == MAX_REPT) {
-        rptskipcnt(trks);     
+        rptskipcnt(trks);
       }
       else {
         trks->rpt_cnt[k] = 0;
@@ -1092,7 +1127,7 @@ static void rptend(trk_data *trks)
 static void getlinenum(trk_data *trks)
 {
   unsigned char c;
- 
+
   ch_skip(trks);       /* skip \n */
   c = ch_get(trks);
   if (c == '\t') {
@@ -1106,7 +1141,7 @@ static void getlinenum(trk_data *trks)
 static void parse(trk_data *trks)
 {
   unsigned char c;
-  
+
   while ((c = ch_cur(trks))) {
     _dbgmsg("C: %c\n",c);
     if (ispitch(c) || isdigit(c) || (c == 'I') || (c == 'V') ||
@@ -1121,9 +1156,11 @@ static void parse(trk_data *trks)
     else if ( c == '\'' )                         { gettxt(trks);      }
     else if ( c == '(' )                          { rptstart(trks);    }
     else if ( c == ')' )                          { rptend(trks);      }
+    else if ( c == '[' )                          { rawchord_start(trks); }
+    else if ( c == ']' )                          { rawchord_end(trks); }
     else if ( c == '\n' )                         { getlinenum(trks);  }
     else if ( isspace(c) )                        { ch_skip(trks);     }
-    else ch_skip(trks);
+    else SCORE_FAIL(trks, 904);
   }
 }
 
@@ -1132,14 +1169,14 @@ static int tomidi(char *fname, short division, unsigned char *s)
   int err = 0;
   trk_data tracks;
   int k;
-  
+
   if (!fname)    return 911;
   if (!s || !*s) return 912;
-  
+
   for (k = 0; k < 10 ; k++) {
     tracks.trgt[k] = 0;
   }
-  
+
   tracks.scale[0] =  0;  /* C */
   tracks.scale[1] =  2;  /* D */
   tracks.scale[2] =  4;  /* E */
@@ -1149,7 +1186,7 @@ static int tomidi(char *fname, short division, unsigned char *s)
   tracks.scale[6] = 11;  /* B */
 
   tracks.scale_n = 7;
-  
+
   for (k = 0; k < MAX_TRACKS; k++) {
        tracks.dur [k]     = division;  /* a quarter note */
        tracks.tick[k]     = 0;
@@ -1161,7 +1198,7 @@ static int tomidi(char *fname, short division, unsigned char *s)
   }
 
   tracks.line = 0;
-  
+
   tracks.track   = 0;
   tracks.ppqn    = division;
   tracks.buf     = s;
@@ -1172,15 +1209,18 @@ static int tomidi(char *fname, short division, unsigned char *s)
 
   tracks.num = 4;
   tracks.den = 2;
-  
+
+  tracks.lastnote = 60;
+  tracks.flags = 0;
+
   tracks.ms = mf_seq_new(fname, division);
 
-  if (tracks.ms) {  
-    if (setjmp(tracks.errjmp) == 0) {
+  if (tracks.ms) {
+    if ((err = setjmp(tracks.errjmp)) == 0) {
       parse(&tracks);
     }
-    err = mf_seq_close(tracks.ms);
-  } 
+    if (!err) err = mf_seq_close(tracks.ms);
+  }
   else err = 910; /* Unable to open midifile */
 
   if (tracks.err) err = tracks.err;
@@ -1191,19 +1231,19 @@ static int tomidi(char *fname, short division, unsigned char *s)
 
 int mf_score(char *fname, short division, unsigned char *score)
 {
-  unsigned char *p;
+  unsigned char *p = NULL;
   int err;
 
   p = demacro(score, &err);
   if (!err) {
     err = tomidi(fname, division, p);
-    free(p);
+    if (p) free(p);
   }
 
   return err;
 }
 
-#endif /**/ 
+#endif /**/
 
 #ifdef MF_SCORE_TEST
 
@@ -1215,10 +1255,10 @@ int main(int argc, char *argv[])
 {
   unsigned char *s;
   unsigned long k;
-  int err = 0;
+  mf_error err = 0;
   int c;
   FILE *f;
-  
+
   if (argc > 1) {
     f = fopen(argv[1],"r");
     if (f) {
@@ -1230,18 +1270,18 @@ int main(int argc, char *argv[])
         k++;
       }
       *s = '\0';
-       
-      fclose(f); 
-      err = mf_score("sc.mid",384, score_buf);    
+
+      fclose(f);
+      err = mf_score("sc.mid",384, score_buf);
     }
-    else { err = 185; }
-  }  
-  else { err = 186; }
-  
-  if (err) printf("ERR: %d\n",err);
-  
+    else { fprintf(stderr,"Unable to open input file\n"); }
+  }
+  else { fprintf(stderr,"Usage:  middl infile [outfile]\n"); }
+
+  if (err) fprintf(stderr, "LINE:%d ERR:%d %s\n", mf_errline(err), mf_errnum(err), mf_errmsg(err));
+
   return(err);
 }
 
-#endif 
+#endif
 

@@ -97,13 +97,13 @@ static unsigned char *readmsg(mf_reader *mfile, long n)
 
   chrbuf_set(mfile, n);
   if (mfile->chrbuf_sz < n) return NULL;
-  
+
   s = mfile->chrbuf;
   while (n-- > 0) {   /*** Read the message ***/
     if ((c = fgetc(mfile->file)) == EOF) return NULL;
     *s++ = c;
   }
-  
+
   return mfile->chrbuf;
 }
 
@@ -138,7 +138,7 @@ static unsigned char *readmsg(mf_reader *mfile, long n)
 #define ON_END       FINAL_:
 #define FINAL        FINAL_
 #define GOTOEND      GOTO(FINAL)
-#define FALLTHROUGH  do {ERROR=ERROR;} while (0) 
+#define FALLTHROUGH  do {ERROR=ERROR;} while (0)
 
 static int scan_midi(mf_reader *mfile)
 {
@@ -179,10 +179,10 @@ static int scan_midi(mf_reader *mfile)
   }
 
   STATE(event) {
-    tmp = readnum(mfile,0); if (tmp < 0) FAIL(2111);
+    tmp = readnum(mfile,0); if (tmp < 0) FAIL(211);
     track_time += tmp;
 
-    tmp = readnum(mfile,1); if (tmp < 0) FAIL(2112);
+    tmp = readnum(mfile,1); if (tmp < 0) FAIL(212);
 
     if ((tmp & 0x80) == 0) {
       if (status == 0) FAIL(223); /* running status not allowed! */
@@ -215,17 +215,17 @@ static int scan_midi(mf_reader *mfile)
 
   STATE(meta_evt) {
     v1 = readnum(mfile,1);
-    if (v1 < 0) FAIL(2114);
+    if (v1 < 0) FAIL(214);
     GOTO(sys_evt);
   }
 
   STATE(sys_evt) {
     v2 = readnum(mfile,0);
-    if (v2 < 0) FAIL(2115);
+    if (v2 < 0) FAIL(215);
 
     msg = readmsg(mfile,v2);
-    if (msg == NULL) FAIL(2116);
-    
+    if (msg == NULL) FAIL(216);
+
     if (v1 == me_end_of_track) {
       ERROR = mfile->on_track(1, curtrack, track_time);
       if (ERROR) FAIL(ERROR);
@@ -310,16 +310,16 @@ int mf_read( char          *fname      , mf_fn_error   fn_error   ,
 
   mr.chrbuf    = NULL;
   mr.chrbuf_sz = 0;
-  
+
   mr.file = fopen(fname, "rb");
   if ( mr.file == NULL) {
     mr.on_error(79,"File not found");
     return -1;
   }
-  
+
   ret = scan_midi(&mr);
-  
-  if (mr.file)   fclose(mr.file); 
+
+  if (mr.file)   fclose(mr.file);
   if (mr.chrbuf) free(mr.chrbuf);
 
   return ret;
@@ -396,12 +396,12 @@ static void f_writevar(mf_writer *mw, unsigned long n)
 mf_writer *mf_new(char *fname, short division)
 {
   mf_writer *mw = NULL;
-   
+
   mw = malloc(sizeof(mf_writer));
   if (!mw) return NULL;
-  
+
   mw->file = fopen(fname, "wb");
-  
+
   if (!mw->file) {  free (mw); return NULL; }
 
   mw->type    = mf_type_file;
@@ -410,7 +410,7 @@ mf_writer *mf_new(char *fname, short division)
   mw->trk_cnt = 0;
   mw->trk_in  = 0;
   mw->division  = division;
-  
+
   /* Write Header chunk (to be rewrite at the end) */
   f_write32(mw, MThd);
   f_write32(mw, 6);
@@ -426,13 +426,13 @@ int mf_track_start (mf_writer *mw)
   if (!mw || !mw->file ) { return 309; }
 
   if (mw->trk_in) mf_track_end(mw);
-  
+
   mw->trk_cnt++;
   mw->trk_in  = 1;
   mw->chan    = 0;
-  
+
   f_write32(mw, MTrk);
-  
+
   /* Save current position for later */
   if ((mw->len_pos = ftell(mw->file)) <  0) { return 301; }
 
@@ -442,11 +442,11 @@ int mf_track_start (mf_writer *mw)
   return 0;
 }
 
-                                                  
+
 int mf_track_end(mf_writer *mw)
-{ 
+{
   unsigned long pos_cur;
-  
+
   if (!mw || !mw->file || !mw->trk_in) { return 329; }
 
   f_writevar(mw, 0);  f_write8(mw, 0xFF);  f_write8(mw, 0x2F);  f_write8(mw, 0x00);
@@ -466,22 +466,22 @@ int mf_midi_evt (mf_writer *mw, unsigned long delta, short type, short chan,
                                                   short data1, short data2)
 {
   unsigned char st;
-  
+
   if (!mw || !mw->file || !mw->trk_in) { return 319; }
 
   st = (type & 0xF0);
-  
+
   if (st == st_system_exclusive)  {return 318; }  /* No sysex accepted here! */
-  
+
   if (st == st_note_on && data2 == 0) st = st_note_off;
-  
+
   f_writevar(mw, delta);
   f_write8(mw, st | (chan & 0x0F));
   f_write7(mw,data1);
   if (mf_numparms(st) > 1)  f_write7(mw, data2);
   mw->chan = chan;
   return 0;
-}                                                 
+}
 
 
 int mf_sys_evt(mf_writer *mw, unsigned long delta,
@@ -489,7 +489,7 @@ int mf_sys_evt(mf_writer *mw, unsigned long delta,
                               long len, unsigned char *data)
 {
   if (!mw || !mw->file || !mw->trk_in) { return 349; }
-  
+
   f_writevar(mw, delta);
   f_write8(mw, type);
   if (type == st_meta_event) f_write8(mw, aux);
@@ -511,36 +511,36 @@ int mf_close (mf_writer *mw)
   unsigned long pos_cur;
 
   if (!mw || !mw->file) { return 399; }
-  
+
   if (mw->trk_in) ret = mf_track_end(mw);
-  
+
   if (mw->trk_cnt > 1) format = 1;
 
   if ((pos_cur = ftell(mw->file)) <  0) {  return 392; }
 
   if (fseek(mw->file, 0, SEEK_SET) < 0) {  return 393; }
- 
+
   f_write32(mw, MThd);
   f_write32(mw, 6);
   f_write16(mw, format);
   f_write16(mw, mw->trk_cnt);
   f_write16(mw, mw->division);
-  
+
   if (fseek(mw->file, pos_cur, SEEK_SET) < 0) { return 394; }
 
   fclose(mw->file);
   free(mw);
-  
+
   return ret;
 }
 
 int mf_pitch_bend(mf_writer *mw, unsigned long delta, unsigned char chan, short bend)
 {/* bend is in the range  -8192 .. 8191 */
-  
+
   if (bend < -8192) bend = -8192;
   if (bend >  8191) bend =  8191;
 
-  bend += 8192;  
+  bend += 8192;
 
   return mf_midi_evt(mw, delta, st_pitch_bend, chan, bend, bend  >> 7);
 }
@@ -548,7 +548,7 @@ int mf_pitch_bend(mf_writer *mw, unsigned long delta, unsigned char chan, short 
 int mf_set_tempo(mf_writer *mw, unsigned long delta, long tempo)
 {
   unsigned char buf[4];
-  
+
   buf[0] = (tempo >> 16) & 0xFF;
   buf[1] = (tempo >>  8) & 0xFF;
   buf[2] = (tempo      ) & 0xFF;
@@ -559,7 +559,7 @@ int mf_set_tempo(mf_writer *mw, unsigned long delta, long tempo)
 int mf_set_keysig(mf_writer *mw, unsigned long delta, short acc, short min)
 {
   unsigned char buf[4];
-  
+
   buf[0] = (unsigned char)(acc & 0xFF);
   buf[1] = (unsigned char)(min & 0x01);
   return mf_sys_evt(mw, delta, st_meta_event, me_key_signature, 2, buf);
@@ -567,7 +567,7 @@ int mf_set_keysig(mf_writer *mw, unsigned long delta, short acc, short min)
 
 
 /** **/
-                                                   
+
 
 #ifdef MF_WRITE_TEST
 
@@ -575,9 +575,9 @@ int main(int argc, char *argv[])
 {
    mf_writer *m;
    int ret = 999;
-   
+
    if ((m = mf_new("xx.mid",192))) {  ret = 0; }
-   
+
    if (!ret)  {ret = mf_track_start(m);}
    if (!ret)  {ret = mf_text(m, 0, "First");}
    if (!ret)  {ret = mf_midi_evt(m,  0,st_note_on ,0,64,100);}
@@ -586,7 +586,7 @@ int main(int argc, char *argv[])
    if (!ret)  {ret = mf_midi_evt(m,  0,st_note_on ,0,67,100);}
    if (!ret)  {ret = mf_midi_evt(m,192,st_note_off,0,67,0);}
    if (!ret)  {ret = mf_track_end(m);}
-   
+
    if (!ret)  {ret = mf_track_start(m);}
    if (!ret)  {ret = mf_copyright_notice(m, 0, "(C) by me");}
    if (!ret)  {ret = mf_midi_evt(m,  0,st_note_on ,0,60,100);}
@@ -594,7 +594,7 @@ int main(int argc, char *argv[])
    if (!ret)  {ret = mf_track_end(m);}
 
    if (!ret)  {ret = mf_close(m);}
-   
+
    if (ret)   { fprintf(stderr, "ERROR: %d\n",ret); }
    return ret;
 }
