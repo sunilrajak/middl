@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="middl" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="src/ut_score" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="src" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option parameters="s4.msq" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-DMF_SCORE_TEST" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/middl" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+		</Compiler>
+		<Unit filename="src/mf_chords.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/mf_chords.h" />
+		<Unit filename="src/mf_errors.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/mf_errors.h" />
+		<Unit filename="src/mf_instr.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/mf_instr.h" />
+		<Unit filename="src/mf_rw.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/mf_rw.h" />
+		<Unit filename="src/mf_score.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/mf_seq.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/mf_seq.h" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
