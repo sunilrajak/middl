@@ -148,7 +148,7 @@ static unsigned long addlong(charbuf *b, unsigned long n)
 
 #define MAX_STK_TOP 128
 
-#define RETURN_ERR(x) do {if (buf.buf) free(buf.buf); *err = line * 1000 + (x); return p;} while(0)
+#define MACRO_FAIL(x) do {if (buf.buf) free(buf.buf); *err = line * 1000 + (x); return p;} while(0)
 
 #define addline(b,x) do { addchar(b,'\t'); addlong(b, x); } while (0)
 
@@ -180,7 +180,7 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
 
   while (*p) {
     if (*p == '}') {
-      if (stk_top == 0) RETURN_ERR(901); /* stray close brace */
+      if (stk_top == 0) MACRO_FAIL(901); /* stray close brace */
       stk_top--;
       p = stk[stk_top];
       line = stk_ln[stk_top];
@@ -196,7 +196,7 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
       addchar(&buf,'\n');
       if (stk_top == 0) { addline(&buf, ++line);  }
     } else if (*p == '{') {
-      RETURN_ERR(903);                   /* stray open brace */
+      MACRO_FAIL(903);                   /* stray open brace */
     } else if (*p == ')' && p[1] == '&') { /*  transform ")&" in "&)"  */
       addchar(&buf,'&');addchar(&buf,')'); p++;
     } else if (*p == '$') {
@@ -204,7 +204,7 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
          addchar(&buf,'$'); p++;
       }
       else if (isdigit(p[1])) {
-         if (p[1] == '0') RETURN_ERR(904);
+         if (p[1] == '0') MACRO_FAIL(904);
          addchar(&buf,'$'); addchar(&buf,p[1]);
          p++;
       }
@@ -223,13 +223,13 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
         q = getmacro(&macros, p+1);
         if (q) {
           _dbgmsg("foundmacro: %s\n",q);
-          if (stk_top == MAX_STK_TOP) RETURN_ERR(902); /* too many levels (infinite loop?) */
+          if (stk_top == MAX_STK_TOP) MACRO_FAIL(902); /* too many levels (infinite loop?) */
           stk[stk_top] = skip_identifier(p+1);
           stk_ln[stk_top] = line;
           p = q;
           stk_top++;
         }
-        else RETURN_ERR(904); /* undefined macro */
+        else MACRO_FAIL(904); /* undefined macro */
       }
     }
     else if (*p == '%') { /* strip Comment */
@@ -365,7 +365,6 @@ static void addnote(trk_data *trks, short n, short dur, short play)
     }
   }
 }
-
 
 static unsigned long notelen(trk_data *trks)
 {
@@ -519,6 +518,9 @@ static void rawchord_end(trk_data *trks)
 {
   ch_skip(trks);
   if (!flg_chk(trks, FLG_RAWCHORD)) SCORE_FAIL(trks,905);
+  if ( trks->chord_n[trks->track] >= MAX_CHORDN-1) SCORE_FAIL(trks,905);
+  trks->chord_n[trks->track]++;
+  trks->notes[trks->track][trks->chord_n[trks->track]] = trks->lastnote;
   flg_clr(trks,FLG_RAWCHORD);
 }
 
@@ -563,32 +565,31 @@ static void getnote(trk_data *trks,int play)
     n += getnum(trks);
   }
   else {
-    if ('A' <= c && c <= 'G')       n = mnotes[c-'A'];
+    cur_oct = trks->notes[trks->track][0] / 12;
+
+    if ('A' <= c && c <= 'G')       n = mnotes[c-'A'] + cur_oct * 12;
     else if (c == 'X')              n = trks->notes[trks->track][0];
     else if (c == 'x')            { n = trks->notes[trks->track][0]; istmp = 1; }
-    else if (c == 'I' || c == 'V')  n = trks->scale[(getroman(trks,c)-1 ) % trks->scale_n];
+    else if (c == 'I' || c == 'V')
+            n = trks->scale[(getroman(trks,c)-1 ) % trks->scale_n] + cur_oct * 12;
     else if (c == '$' && isdigit(ch_cur(trks)))
-            n = trks->scale[(ch_get(trks) - '1') % trks->scale_n];
+            n = trks->scale[(ch_get(trks) - '1') % trks->scale_n] + cur_oct * 12;
     else if (c == '#' && isdigit(ch_cur(trks)))
             n = trks->notes[trks->track][1+((ch_get(trks) - '1') % trks->chord_n[trks->track])];
     else {SCORE_FAIL(trks,999) ;}
-
-    n = n % 12;
 
     c = ch_get(trks);
     if (c == 'b')      { n--; while ((c = ch_cur(trks)) == 'b')  {n--; c = ch_get(trks);} }
     else if (c == '#') { n++; while ((c = ch_cur(trks)) == '#')  {n++; c = ch_get(trks);} }
     else ch_unget(trks);
 
-    cur_oct = trks->notes[trks->track][0] / 12;
     c = ch_get(trks);
-    if ('0' <= c && c <= '9')  { cur_oct = c-'0'+1; }
-    else if ( c == 'N')        { cur_oct = 0; }
+    if ('0' <= c && c <= '9')  { cur_oct = c-'0'+1; n = (n % 12) + cur_oct * 12; }
+    else if ( c == 'N')        { cur_oct = 0;       n = (n % 12); }
     else if ( c == '\'')       { tmp_oct++; while ((c = ch_cur(trks)) == '\'')  {tmp_oct++; c = ch_get(trks);} }
     else if ( c == ',')        { tmp_oct--; while ((c = ch_cur(trks)) == ',')   {tmp_oct--; c = ch_get(trks);} }
     else ch_unget(trks);
 
-    n += cur_oct * 12;
   }
 
   n = in_127(n);
@@ -1063,7 +1064,7 @@ static void rptstart(trk_data *trks)
 {
    unsigned char c;
 
-    c = ch_get(trks);
+    ch_skip(trks);
     c = ch_cur(trks);
 
     if (c && trks->rpt_top < MAX_REPT) {
@@ -1089,7 +1090,7 @@ static void rptend(trk_data *trks)
   unsigned char c;
   int k;
 
-  c = ch_get(trks);     /* skip ) */
+  ch_skip(trks);     /* skip ) */
   c = ch_cur(trks);
 
   if (trks->rpt_top == 0) {
