@@ -21,7 +21,7 @@ static char *chords[] = {
   "11 \0\004\003\003\004\003",
   "11(b5) \0\004\002\004\004\003",
   "13 \0\004\003\003\004\007",
-  "4 \0\004\003\012", 
+  "4 \0\004\003\012",
   "5 \0\007",
   "6 \0\004\003\002",
   "7 \0\004\003\003",
@@ -117,7 +117,7 @@ static char *chords[] = {
   "minmaj7 \0\003\004\004",
   "minmaj9 \0\003\004\004\003",
   "sus/9 \0\005\002\007",
-  "sus2 \0\002\005", 
+  "sus2 \0\002\005",
   "sus4 \0\005\002",
   "sus6 \0\005\002\002",
   "sus6/9 \0\005\002\002\005",
@@ -138,18 +138,18 @@ char *mf_chordbyname(char *name)
    char chname[32];
    char **q = NULL;
    char *p = chname;
-   
-   for (k=0; name[k] && name[k] != ']' && name[k] != ':' && k<30; k++) {
+
+   for (k=0; name[k] && name[k] != ']' && name[k] != ':' && !isspace(name[k]) k<30; k++) {
      chname[k] = name[k];
    }
    chname[k++] = ' ';
    chname[k] = '\0';
    /*fprintf(stderr,"CBN: %s %d %p %p\n", chname,sizeof(chords)/sizeof(chords[0]),chname, &chname); fflush(stderr);*/
-    
+
    q = bsearch(&p, chords, sizeof(chords)/sizeof(chords[0]), sizeof(chords[0]), chord_cmp);
 
    /*fprintf(stderr,"CBN2: %p \n", q); fflush(stderr);*/
-   
+
    if (!q) return NULL;
    p = *q;
    /*fprintf(stderr,"CBN3: %s \n", p); fflush(stderr);*/
