@@ -139,7 +139,7 @@ char *mf_chordbyname(char *name)
    char **q = NULL;
    char *p = chname;
 
-   for (k=0; name[k] && name[k] != ']' && name[k] != ':' && !isspace(name[k]) k<30; k++) {
+   for (k=0; name[k] && name[k] != ']' && name[k] != ':' && !isspace(name[k]) && k<30; k++) {
      chname[k] = name[k];
    }
    chname[k++] = ' ';
