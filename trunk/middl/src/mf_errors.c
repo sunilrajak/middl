@@ -22,6 +22,7 @@ char *mf_errmsg(short errnum)
     case 903: return "Unknown instrument";
     case 904: return "Syntax error";
     case 905: return "Invalid chord";
+    case 906: return "Invalid channel";
   }
 
   return "Unexpected error";

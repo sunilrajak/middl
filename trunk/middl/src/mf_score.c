@@ -125,14 +125,17 @@ static int chkbuf(charbuf *b, unsigned long n)
 }
 
 
-static unsigned long addchar(charbuf *b, unsigned char c)
+static void addchar(charbuf *b, unsigned char c)
 {
   if (chkbuf(b,2)) {
     b->buf[b->buf_cnt++] = c;
     b->buf[b->buf_cnt] = '\0';
-    return b->buf_cnt;
   }
-  return 0;
+}
+
+static void addstring(charbuf *b, char *s)
+{
+  while (*s) addchar(b,*s++);
 }
 
 static unsigned long addlong(charbuf *b, unsigned long n)
@@ -208,6 +211,21 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
          addchar(&buf,'$'); addchar(&buf,p[1]);
          p++;
       }
+      else if (p[1] == '[') {
+         p+=2;
+         if (p[1] != ']') MACRO_FAIL(905);
+         switch (*p) {
+           case '1' : addstring(&buf,"[$1  & $3  & $5 ]"); break;
+           case '2' : addstring(&buf,"[$2  & $4  & $6 ]"); break;
+           case '3' : addstring(&buf,"[$3  & $5  & $7 ]"); break;
+           case '4' : addstring(&buf,"[$4  & $6  & $1']"); break;
+           case '5' : addstring(&buf,"[$5, & $7, & $2 ]"); break;
+           case '6' : addstring(&buf,"[$6, & $1  & $3 ]"); break;
+           case '7' : addstring(&buf,"[$7, & $2  & $4 ]"); break;
+           default  : MACRO_FAIL(905);
+         }
+         p++;
+      }
       else if (is_macro_def(p+1)) {
         p++;
         if (chkmacro(&macros,1)) {
@@ -253,6 +271,7 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
       dbgmsg("%s\n",macros.macro_vec[k]);
     }
   }
+  exit(1);
   #endif
   return buf.buf;
 }
@@ -271,6 +290,8 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
 #define SCORE_FAIL(t,e) ((t)->err = (e), longjmp((t)->errjmp, (e)))
 
 #define FLG_RAWCHORD 1
+#define FLG_NOPLAY   2
+
 #define flg_set(x,f)  ((x)->flags |=  (f))
 #define flg_clr(x,f)  ((x)->flags &= ~(f))
 #define flg_chk(x,f)  ((x)->flags & (f))
@@ -311,6 +332,7 @@ typedef struct { /* trk_data */
   unsigned char    chan[MAX_TRACKS];
   unsigned char    inst[MAX_TRACKS];
   unsigned char     vol[MAX_TRACKS];
+  unsigned char     oct[MAX_TRACKS];
 } trk_data;
 
 static unsigned char *mnotes = (unsigned char *)"\x09\x0B\x00\x02\x04\x05\x07";
@@ -327,6 +349,9 @@ static unsigned char ch_next(trk_data *trks)
 
 static unsigned char *ch_curptr(trk_data *trks)
 { return trks->ptr; }
+
+static void ch_setptr(trk_data *trks, unsigned char *ptr)
+{ trks->ptr = ptr; }
 
 static unsigned char *ch_skip(trk_data *trks)
 { return trks->ptr++; }
@@ -352,6 +377,7 @@ static unsigned char ch_ahead(trk_data *trks)
 static void addnote(trk_data *trks, short n, short dur, short play)
 {
   trks->lastnote = n;
+  play = play && !flg_chk(trks,FLG_NOPLAY);
   if (play) {
     if (dur != 0) {
       trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_note_on, trks->chan[trks->track],
@@ -506,11 +532,14 @@ static void getchord(trk_data *trks, short root, int play)
   }
 }
 
-static void rawchord_start(trk_data *trks)
+static void rawchord_start(trk_data *trks, int play)
 {
+
   ch_skip(trks);
+
   if (flg_chk(trks, FLG_RAWCHORD)) SCORE_FAIL(trks,905);
   flg_set(trks,FLG_RAWCHORD);
+  if (!play) flg_set(trks,FLG_NOPLAY);
   trks->chord_n[trks->track] = 0;
 }
 
@@ -522,6 +551,7 @@ static void rawchord_end(trk_data *trks)
   trks->chord_n[trks->track]++;
   trks->notes[trks->track][trks->chord_n[trks->track]] = trks->lastnote;
   flg_clr(trks,FLG_RAWCHORD);
+  flg_clr(trks,FLG_NOPLAY);
 }
 
 static short getroman(trk_data *trks,  unsigned char c)
@@ -565,7 +595,7 @@ static void getnote(trk_data *trks,int play)
     n += getnum(trks);
   }
   else {
-    cur_oct = trks->notes[trks->track][0] / 12;
+    cur_oct = trks->oct[trks->track];
 
     if ('A' <= c && c <= 'G')       n = mnotes[c-'A'] + cur_oct * 12;
     else if (c == 'X')              n = trks->notes[trks->track][0];
@@ -586,10 +616,11 @@ static void getnote(trk_data *trks,int play)
     c = ch_get(trks);
     if ('0' <= c && c <= '9')  { cur_oct = c-'0'+1; n = (n % 12) + cur_oct * 12; }
     else if ( c == 'N')        { cur_oct = 0;       n = (n % 12); }
-    else if ( c == '\'')       { tmp_oct++; while ((c = ch_cur(trks)) == '\'')  {tmp_oct++; c = ch_get(trks);} }
-    else if ( c == ',')        { tmp_oct--; while ((c = ch_cur(trks)) == ',')   {tmp_oct--; c = ch_get(trks);} }
+    else if ( c == '\'')       { tmp_oct++; while ((c = ch_cur(trks)) == '\'' && tmp_oct <  10)  {tmp_oct++; c = ch_get(trks);} }
+    else if ( c == ',')        { tmp_oct--; while ((c = ch_cur(trks)) == ','  && tmp_oct > -10)  {tmp_oct--; c = ch_get(trks);} }
     else ch_unget(trks);
 
+    trks->oct[trks->track] = cur_oct;
   }
 
   n = in_127(n);
@@ -708,8 +739,10 @@ static void rtarget(trk_data *trks)
       trks->chord_n[trks->track]++;
       trks->notes[trks->track][trks->chord_n[trks->track]] = trks->lastnote;
     }
-    trks->ptr -=2 ;
-    back(trks);
+    if (!flg_chk(trks, FLG_NOPLAY)) {
+      trks->ptr -=2 ;
+      back(trks);
+    }
   }
 
 }
@@ -772,6 +805,7 @@ static void setmeter(trk_data *trks)
       case   8: d = 3; break;
       case  16: d = 4; break;
       case  32: d = 5; break;
+      case  64: d = 6; break;
       default : d = 2;
     }
   }
@@ -882,7 +916,7 @@ static char *getscale(trk_data *trks)
   SCORE_FAIL(trks,999); ; /* WHAT? Where's my major scale?? */
 }
 
-unsigned char *keyroot =
+unsigned char *keyroot = (unsigned char *)
     /* Cb  Gb  Db  Ab  Eb  Bb  F   C   G   D   A   E   B  F#   C# */
      "\x0B\x06\x01\x08\x03\x0A\x06\x00\x07\x02\x09\x04\x0B\x06\x01"
      "\x08\x03\x0A\x05\x00\x07\x02\x09\x04\x0B\x06\x01\x08\x03\x0A";
@@ -891,7 +925,7 @@ unsigned char *keyroot =
 
 #define NO_KEY 100
 
-static setkey(trk_data *trks)
+static void setkey(trk_data *trks)
 {
   /*  @key:+3:min  @key:Db:min */
   short n = NO_KEY;
@@ -901,7 +935,7 @@ static setkey(trk_data *trks)
   short k = 0;
   unsigned char data[4];
   unsigned char *p = NULL;
-  unsigned char *q = NULL;
+           char *q = NULL;
   unsigned char c;
 
   skipctrl(trks);
@@ -983,12 +1017,27 @@ static void setinstr(trk_data *trks)
     n = mf_instrbyname(iname);
   }
 
-  if (n<0) SCORE_FAIL(trks, 903);
+  if (n < 0) SCORE_FAIL(trks, 903);
 
 
   trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_program_change, trks->chan[trks->track], n, 0);
   if (!trks->err && k>0)
-    trks->err = mf_seq_sys(trks->ms,  trks->tick[trks->track], st_meta_event, me_instrument_name, k, iname);
+    trks->err = mf_seq_sys(trks->ms,  trks->tick[trks->track], st_meta_event, me_instrument_name, k, (unsigned char *)iname);
+}
+
+static void setchannel(trk_data *trks)
+{
+  unsigned char  c;
+  short n;
+  skipctrl(trks);
+  n = getnum(trks);
+  if ( n < 1 || 16 < n) SCORE_FAIL(trks,906);
+  trks->chan[trks->track] = n-1;
+}
+
+static void setcc(trk_data *trks)
+{
+
 }
 
 static void ctrl(trk_data *trks)
@@ -1002,29 +1051,41 @@ static void ctrl(trk_data *trks)
 
   _dbgmsg("CTRL: [%c]\n",c);
 
-  if ( '1' <= c && c <= '9') {
-    trks->chan[trks->track] = (c-'1');
-    c = ch_get(trks);
-  }
-  else if (strncmp(p,"meter:",6) == 0)    { setmeter(trks); }
-  else if (strncmp(p,"key:"  ,4) == 0)    { setkey(trks);   }
-  else if (strncmp(p,"bpm:"  ,4) == 0)    { setbpm(trks);   }
-  else if (strncmp(p,"pan:"  ,4) == 0)    {  }
-  else if (strncmp(p,"vol:"  ,4) == 0)    { setvol(trks);   }
-  else if (strncmp(p,"vel:"  ,4) == 0)    { setvel(trks);   }
-  else if (strncmp(p,"instr:",6) == 0)    { setinstr(trks); }
+       if (strncmp(p,"meter:",6) == 0)    { setmeter(trks);   }
+  else if (strncmp(p,"key:"  ,4) == 0)    { setkey(trks);     }
+  else if (strncmp(p,"bpm:"  ,4) == 0)    { setbpm(trks);     }
+  else if (strncmp(p,"pan:"  ,4) == 0)    {                   }
+  else if (strncmp(p,"rev:"  ,4) == 0)    {                   }
+  else if (strncmp(p,"cc:"   ,3) == 0)    { setcc(trks);      }
+  else if (strncmp(p,"ch:"   ,3) == 0)    { setchannel(trks); }
+  else if (strncmp(p,"vol:"  ,4) == 0)    { setvol(trks);     }
+  else if (strncmp(p,"vel:"  ,4) == 0)    { setvel(trks);     }
+  else if (strncmp(p,"instr:",6) == 0)    { setinstr(trks);   }
   else { SCORE_FAIL(trks,902); }
 }
 
 static void defvalue(trk_data *trks)
 {
   unsigned char c;
+  short oct = 0;
 
   ch_skip(trks);        /* skip ':' */
   c = ch_cur(trks);
   _dbgmsg("DEFV: [%c]\n",c);
+
   if (!c || isspace(c)) return;
-  getnote(trks,0);
+
+  if ( c == '\'')       { while ((c = ch_cur(trks)) == '\'' && oct <  10)  {oct++; c = ch_get(trks);} }
+  else if ( c == ',')   { while ((c = ch_cur(trks)) == ','  && oct > -10)  {oct--; c = ch_get(trks);} }
+  else if ( c == '[')   { rawchord_start(trks,0); }
+  else if ( c == '/')   { notelen(trks); }
+  else getnote(trks,0);
+
+  if (oct != 0) {
+    trks->oct[trks->track] += oct;
+    if (trks->oct[trks->track] > 9) trks->oct[trks->track] = 9;
+    if (trks->oct[trks->track] < 0) trks->oct[trks->track] = 0;
+  }
 }
 
 static void gettxt(trk_data *trks)
@@ -1157,10 +1218,10 @@ static void parse(trk_data *trks)
     else if ( c == '\'' )                         { gettxt(trks);      }
     else if ( c == '(' )                          { rptstart(trks);    }
     else if ( c == ')' )                          { rptend(trks);      }
-    else if ( c == '[' )                          { rawchord_start(trks); }
+    else if ( c == '[' )                          { rawchord_start(trks,1); }
     else if ( c == ']' )                          { rawchord_end(trks); }
     else if ( c == '\n' )                         { getlinenum(trks);  }
-    else if ( isspace(c) )                        { ch_skip(trks);     }
+    else if ( c == ';' || isspace(c))             { ch_skip(trks);     }
     else SCORE_FAIL(trks, 904);
   }
 }
@@ -1196,6 +1257,7 @@ static int tomidi(char *fname, short division, unsigned char *s)
       tracks.notes[k][0]  = 60;
     tracks.chord_n[k]     = 0;
         tracks.vol[k]     = 90;
+        tracks.oct[k]     = 5;
   }
 
   tracks.line = 0;
