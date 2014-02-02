@@ -32,14 +32,14 @@
 1388872831 d:\00_programming\a0_libraries\middl\middl\src\mf_seq.h
 	"mf_rw.h"
 
-1391354096 source:d:\00_programming\a0_libraries\middl\middl\src\mf_score.c
+1391381276 source:d:\00_programming\a0_libraries\middl\middl\src\mf_score.c
 	"mf_seq.h"
 	"mf_chords.h"
 	"mf_instr.h"
 	"mf_errors.h"
 	<setjmp.h>
 
-1390771386 source:d:\00_programming\a0_libraries\middl\middl\src\mf_errors.c
+1391381340 source:d:\00_programming\a0_libraries\middl\middl\src\mf_errors.c
 	"mf_errors.h"
 
 1390663660 d:\00_programming\a0_libraries\middl\middl\src\mf_errors.h

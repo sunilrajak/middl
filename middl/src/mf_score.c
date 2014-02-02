@@ -1037,7 +1037,20 @@ static void setchannel(trk_data *trks)
 
 static void setcc(trk_data *trks)
 {
+  unsigned char  c;
+  short n;
+  short v = 0;
 
+  skipctrl(trks);
+  n = getnum(trks);
+  if (n < 0 || 127 < n) SCORE_FAIL(trks,907);
+  if (ch_cur(trks) != ':') SCORE_FAIL(trks,907);
+  ch_skip(trks);
+  v = getnum(trks);
+  if (v < 0 || 127 < v) SCORE_FAIL(trks,908);
+
+  trks->err = mf_seq_evt(trks->ms, trks->tick[trks->track], st_control_change, trks->chan[trks->track],
+                                           n, v);
 }
 
 static void ctrl(trk_data *trks)
