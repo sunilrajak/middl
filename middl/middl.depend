@@ -1,0 +1,46 @@
+# depslib dependency file v1.0
+1391246333 source:d:\00_programming\a0_libraries\middl\middl\src\mf_chords.c
+	"mf_chords.h"
+
+1390147297 d:\00_programming\a0_libraries\middl\middl\src\mf_chords.h
+	<stdio.h>
+	<ctype.h>
+	<stdlib.h>
+	<strings.h>
+
+1389305067 source:d:\00_programming\a0_libraries\middl\middl\src\mf_instr.c
+	"mf_instr.h"
+
+1390142518 d:\00_programming\a0_libraries\middl\middl\src\mf_instr.h
+	<stdio.h>
+	<ctype.h>
+	<stdlib.h>
+	<strings.h>
+
+1390662755 source:d:\00_programming\a0_libraries\middl\middl\src\mf_rw.c
+	"mf_rw.h"
+
+1388434874 d:\00_programming\a0_libraries\middl\middl\src\mf_rw.h
+	<stdio.h>
+	<stdlib.h>
+	<ctype.h>
+	<strings.h>
+
+1388920749 source:d:\00_programming\a0_libraries\middl\middl\src\mf_seq.c
+	"mf_seq.h"
+
+1388872831 d:\00_programming\a0_libraries\middl\middl\src\mf_seq.h
+	"mf_rw.h"
+
+1391354096 source:d:\00_programming\a0_libraries\middl\middl\src\mf_score.c
+	"mf_seq.h"
+	"mf_chords.h"
+	"mf_instr.h"
+	"mf_errors.h"
+	<setjmp.h>
+
+1390771386 source:d:\00_programming\a0_libraries\middl\middl\src\mf_errors.c
+	"mf_errors.h"
+
+1390663660 d:\00_programming\a0_libraries\middl\middl\src\mf_errors.h
+
