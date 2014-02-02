@@ -23,6 +23,8 @@ char *mf_errmsg(short errnum)
     case 904: return "Syntax error";
     case 905: return "Invalid chord";
     case 906: return "Invalid channel";
+    case 907: return "Invalid controller";
+    case 908: return "Invalid controller value";
   }
 
   return "Unexpected error";
