@@ -312,6 +312,7 @@ typedef struct { /* trk_data */
   short den;
 
   short lastnote;
+  short notepct;
 
   short rpt_top;
   unsigned char *rpt_pos[MAX_REPT];
@@ -390,6 +391,7 @@ static int seq_sys(trk_data *trks, short type, short aux, long len, unsigned cha
 
 static void addnote(trk_data *trks, short n, short dur, short play)
 {
+  unsigned long d;
   trks->lastnote = n;
   play = play && !flg_chk(trks,FLG_NOPLAY);
   if (play) {
@@ -398,8 +400,10 @@ static void addnote(trk_data *trks, short n, short dur, short play)
     }
     _dbgmsg("TICK: %d DUR: %d\n",  trks->tick[trks->track], dur);
     if (dur != DUR_INFINITE) {
-      trks->tick[trks->track] += dur;
+      d = (dur * trks->notepct) / 10000;
+      trks->tick[trks->track] += d;
       trks->err = seq_evt(trks, st_note_off, n, 0);
+      trks->tick[trks->track] += (dur-d);
     }
   }
 }
@@ -1077,10 +1081,20 @@ static void setcc(trk_data *trks)
   trks->err = seq_evt(trks, st_control_change, n, v);
 }
 
+static void setnotepct(trk_data *trks)
+{
+  short n;
+  skipctrl(trks);
+  n = getnum(trks);
+  if (n < 1 || 100 < n) SCORE_FAIL(trks,907);
+  trks->notepct = n * 100;
+}
+
 static void ctrl(trk_data *trks)
 {
   char *p;
 
+  ch_skip(trks);
   p = (char *)ch_curptr(trks);
 
   _dbgmsg("CTRL: [%c]\n",c);
@@ -1095,6 +1109,7 @@ static void ctrl(trk_data *trks)
   else if (strncmp(p,"vol:"  ,4) == 0)    { setvol(trks);     }
   else if (strncmp(p,"vel:"  ,4) == 0)    { setvel(trks);     }
   else if (strncmp(p,"instr:",6) == 0)    { setinstr(trks);   }
+  else if (strncmp(p,"npct:", 5) == 0)    { setnotepct(trks); }
   else { SCORE_FAIL(trks,902); }
 }
 
@@ -1303,6 +1318,8 @@ static int tomidi(char *fname, short division, unsigned char *s)
   tracks.err     = 0;
   tracks.rpt_top = 0;
   tracks.trgt_n  = 0;
+
+  tracks.notepct = 9000; /* 90% */
 
   tracks.num = 4;
   tracks.den = 2;
