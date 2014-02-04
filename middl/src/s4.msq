@@ -1,9 +1,10 @@
 
-[A, & C & E] #1 #2 #3
+%[A, & C & E] #1/e3 #2 #3
 
+|1 [A, & C & E] A,/e3 C E #1/e3 #2 #3
 
 %@key:C:min
-@key:C:har
+%@key:C:har
 %|1  I II III IV V VI VII
 %@key:A:har
 %    I II III IV V VI VII
@@ -12,3 +13,4 @@
 %    $7 $6 $5 $4 $3 $2 $1
 
 %|2 A[min] C[maj7] D[dim]
+

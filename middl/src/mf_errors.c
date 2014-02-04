@@ -25,6 +25,7 @@ char *mf_errmsg(short errnum)
     case 906: return "Invalid channel";
     case 907: return "Invalid controller";
     case 908: return "Invalid controller value";
+    case 909: return "Invalid scale note";
   }
 
   return "Unexpected error";
