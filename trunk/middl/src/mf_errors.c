@@ -13,7 +13,7 @@
 */
 #include "mf_errors.h"
 
-char *mf_errmsg(short errnum)
+char *mf_errmsg(unsigned long errnum)
 {
 
   switch (mf_errnum(errnum)) {

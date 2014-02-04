@@ -12,7 +12,7 @@
 ** express or implied warranty.
 */
 
-char *mf_errmsg(short errnum);
+char *mf_errmsg(unsigned long errnum);
 
 #define mf_errnum(e)  ((e) % 1000)
 #define mf_errline(e) ((e) / 1000)
