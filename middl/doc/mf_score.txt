@@ -3,7 +3,7 @@ notey = globals*  track*
 
 globals = (value | macro-def)
 
-value = "@" ("cc"\d+ | par-name ) ":" (\d+ | string) note-len?
+value = "@" ("cc:"\d+ | par-name ) ":" (\d+ | string) note-len?
 
 track = "|"\d+ SPC  event*
 
@@ -11,8 +11,9 @@ event = note | chord | value | syllable | "(" event+ ")*" \d+
 
 
 note-pitch = [A-Ga-g]("#"|"b")?(\d | "'" | ",")?
-note-len   = ":"(\d?[wheqst]\d?)?
-note       = (note-pitch | "+"?\d+ | "-"\d+) note-len?
+note-len   = "/"(\d?[wheqst]\d?)?
+note       = (note-pitch | ) note-len?
+
 
 note-default = ":" note | note-len
 

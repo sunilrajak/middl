@@ -34,7 +34,6 @@ static int is_idchar(unsigned char c)
 
 static int is_macro_def(unsigned char *q)
 {
-
    while (is_idchar(*q))  q++;
    _dbgmsg("ismacro: [%s][%s]\n",p,q);
    return (*q == '{');
