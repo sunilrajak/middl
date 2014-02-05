@@ -20,7 +20,7 @@ Introduction
 ============
 
 The name of the library (``msq``) is pronounced as the french word *musique*
-and, in reality, stands for "Midifile Sequencer"
+but, in reality, stands for "Midifile Sequencer"
  
 This is a library to read and write Standard MIDI files. It is not
 the first one of this genre but it has been created with the following
@@ -35,11 +35,8 @@ Levels of API
 
 ::
                         READ            WRITE
-                     +---------------------------+
-   4      sequencer  |                           |
-                     +---------------------------+                           
                                     +------------+
-   3 musical events                 |            |
+   3      sequencer                 |            |
                                     +------------+
                      +------------+ +------------+
    2    midi events  |            | |            |
@@ -47,9 +44,9 @@ Levels of API
                      +------------+ +------------+
    1     raw events  |            | |            |
                      +------------+ +------------+
-                     +---------------------------+
-   0       handlers  |                           |
-                     +---------------------------+
+                     +------------+
+   0       handlers  |            |
+                     +------------+
                         
 Handlers 
 ========
