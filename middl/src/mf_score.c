@@ -214,13 +214,13 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
          p+=2;
          if (p[1] != ']') MACRO_FAIL(905);
          switch (*p) {
-           case '1' : addstring(&buf,"[$1  & $3  & $5 & $7 ]"); break;
-           case '2' : addstring(&buf,"[$2  & $4  & $6 & $1']"); break;
-           case '3' : addstring(&buf,"[$3  & $5  & $7 & $2']"); break;
-           case '4' : addstring(&buf,"[$4  & $6  & $1'& $3']"); break;
-           case '5' : addstring(&buf,"[$5, & $7, & $2 & $4 ]"); break;
-           case '6' : addstring(&buf,"[$6, & $1  & $3 & $5 ]"); break;
-           case '7' : addstring(&buf,"[$7, & $2  & $4 & $6 ]"); break;
+           case '1' : addstring(&buf,"[$1  & $3  & $5 ]"); break;
+           case '2' : addstring(&buf,"[$2  & $4  & $6 ]"); break;
+           case '3' : addstring(&buf,"[$3  & $5  & $7 ]"); break;
+           case '4' : addstring(&buf,"[$4  & $6  & $1']"); break;
+           case '5' : addstring(&buf,"[$5, & $7, & $2 ]"); break;
+           case '6' : addstring(&buf,"[$6, & $1  & $3 ]"); break;
+           case '7' : addstring(&buf,"[$7, & $2  & $4 ]"); break;
            default  : MACRO_FAIL(905);
          }
          p++;
