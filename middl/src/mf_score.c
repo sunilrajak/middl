@@ -573,16 +573,6 @@ static short getroman(trk_data *trks,  unsigned char c)
 {
   short n = 0;
 
-/*
-  vii
-  vi
-  v
-  iv
-  iii
-  ii
-  i
-*/
-
   while (c == 'I')  { n++;     c = ch_get(trks); }
   if (c == 'V')     { n = 5-n; c = ch_get(trks); }
   while ( c == 'I') { n++;     c = ch_get(trks); }
