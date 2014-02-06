@@ -549,7 +549,6 @@ static void getchord(trk_data *trks, short root, int play)
 
 static void rawchord_start(trk_data *trks, int play)
 {
-
   ch_skip(trks);
 
   if (flg_chk(trks, FLG_RAWCHORD)) SCORE_FAIL(trks,905);
@@ -561,6 +560,7 @@ static void rawchord_start(trk_data *trks, int play)
 static void rawchord_end(trk_data *trks)
 {
   ch_skip(trks);
+
   if (!flg_chk(trks, FLG_RAWCHORD)) SCORE_FAIL(trks,905);
   if ( trks->chord_n[trks->track] >= MAX_CHORDN-1) SCORE_FAIL(trks,905);
   trks->chord_n[trks->track]++;
@@ -572,6 +572,16 @@ static void rawchord_end(trk_data *trks)
 static short getroman(trk_data *trks,  unsigned char c)
 {
   short n = 0;
+
+/*
+  vii
+  vi
+  v
+  iv
+  iii
+  ii
+  i
+*/
 
   while (c == 'I')  { n++;     c = ch_get(trks); }
   if (c == 'V')     { n = 5-n; c = ch_get(trks); }
@@ -778,24 +788,6 @@ static void rtarget(trk_data *trks)
 
 }
 #endif /**/
-
-static void skiparg(trk_data *trks)
-{
-  unsigned char  c;
-   c = ch_get(trks);
-   if (c == '"') {
-      c = ch_get(trks);
-      while (c && c != '"') {
-        if (c == '\\' && ch_cur(trks)) c = ch_get(trks);
-        c = ch_get(trks);
-      }
-      if (c) { c = ch_get(trks); }
-   }
-   else {
-     while (c && !isspace(c)) c = ch_get(trks);
-   }
-
-}
 
 static void skipctrl(trk_data *trks)
 {
