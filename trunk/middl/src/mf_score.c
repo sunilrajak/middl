@@ -288,8 +288,8 @@ static unsigned char *demacro(unsigned char *inbuf, int *err)
 
 #define SCORE_FAIL(t,e) ((t)->err = (e), longjmp((t)->errjmp, (e)))
 
-#define FLG_RAWCHORD 1
-#define FLG_NOPLAY   2
+#define FLG_RAWCHORD 0x01
+#define FLG_NOPLAY   0x02
 
 #define flg_set(x,f)  ((x)->flags |=  (f))
 #define flg_clr(x,f)  ((x)->flags &= ~(f))
@@ -331,7 +331,7 @@ typedef struct { /* trk_data */
   unsigned char chord_n[MAX_TRACKS];
   unsigned char    chan[MAX_TRACKS];
   unsigned char    inst[MAX_TRACKS];
-  unsigned char     vol[MAX_TRACKS];
+  unsigned char     vel[MAX_TRACKS];
   unsigned char     oct[MAX_TRACKS];
 } trk_data;
 
@@ -395,7 +395,7 @@ static void addnote(trk_data *trks, short n, short dur, short play)
   play = play && !flg_chk(trks,FLG_NOPLAY);
   if (play) {
     if (dur != 0) {
-      trks->err = seq_evt(trks, st_note_on, n, trks->vol[trks->track]);
+      trks->err = seq_evt(trks, st_note_on, n, trks->vel[trks->track]);
     }
     _dbgmsg("TICK: %d DUR: %d\n",  trks->tick[trks->track], dur);
     if (dur != DUR_INFINITE) {
@@ -795,7 +795,7 @@ static void setvel(trk_data *trks)
   short n = 0;
   skipctrl(trks);
   n = getnum(trks);
-  trks->vol[trks->track] = n;
+  trks->vel[trks->track] = n;
 }
 
 static void setmeter(trk_data *trks)
@@ -1091,7 +1091,7 @@ static void ctrl(trk_data *trks)
   else if (strncmp(p,"vel:"  ,4) == 0)    { setvel(trks);     }
   else if (strncmp(p,"instr:",6) == 0)    { setinstr(trks);   }
   else if (strncmp(p,"npct:", 5) == 0)    { setnotepct(trks); }
-  else { SCORE_FAIL(trks,902); }
+  else    { SCORE_FAIL(trks,902); }
 }
 
 static void defvalue(trk_data *trks)
@@ -1265,7 +1265,7 @@ static int tomidi(char *fname, short division, unsigned char *s)
   if (!fname)    return 911;
   if (!s || !*s) return 912;
 
-  for (k = 0; k < 10 ; k++) {
+  for (k = 0; k < MAX_TRGT ; k++) {
     tracks.trgt[k] = 0;
   }
 
@@ -1286,7 +1286,7 @@ static int tomidi(char *fname, short division, unsigned char *s)
        tracks.inst[k]     = 0;
       tracks.notes[k][0]  = 60;
     tracks.chord_n[k]     = 0;
-        tracks.vol[k]     = 90;
+        tracks.vel[k]     = 90;
         tracks.oct[k]     = 5;
   }
 
