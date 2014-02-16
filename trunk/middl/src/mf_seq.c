@@ -72,7 +72,7 @@ static void dmp_evts(mf_seq *ms)
 }
 #endif
 
-static char *evt_ord = "98ABCDE7";
+static char *evt_ord = "F98ABCDE";
 #define evt_cmp_st(x) (evt_ord[((x)>>4) & 0x07])
 
 static int evt_cmp(const void *a, const void *b)
