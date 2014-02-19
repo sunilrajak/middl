@@ -97,7 +97,7 @@ int mf_seq_close(mf_seq *ms)
 {
   int k;
   int trk = -1;
-  unsigned long tick;
+  unsigned long tick=0;
   unsigned long delta;
   unsigned long nxtk;
   unsigned char *p;

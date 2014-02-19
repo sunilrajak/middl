@@ -38,6 +38,8 @@ int main(int argc, char *argv[])
 
   luaL_openlibs(L);
   msq_luaopen(L);
+  luaopen_lpeg(L);
+  lua_setglobal(L,"lpeg");
 
   /* Create the arg[] table */
   lua_newtable(L);
