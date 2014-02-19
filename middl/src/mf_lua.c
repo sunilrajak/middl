@@ -13,7 +13,7 @@
 */
 
 #include <stdio.h>
-#include <stddef.h> 
+#include <stddef.h>
 #include <string.h>
 #include <stdarg.h>
 
@@ -21,24 +21,44 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
-#include "mf.h"
+#include "mf_seq.h"
 
 
+static int l_read(lua_State *L)
+{
+    return 0;
+}
 
+static int l_write(lua_State *L)
+{
+    return 0;
+}
 
-static struct luaL_reg msq_funcs[] = {
+static int l_wrt_midi_event(lua_State *L)
+{
+    return 0;
+}
+
+static int l_wrt_sys_event(lua_State *L)
+{
+    return 0;
+}
+
+static struct luaL_Reg msq_funcs[5] = {
   {"read"             , l_read},
   {"write"            , l_write},
-  {"score"            , l_score},
   {"midi_event"       , l_wrt_midi_event},
   {"sys_event"        , l_wrt_sys_event},
-  
+
   {NULL, NULL}
 };
 
-int mf_luaopen(lua_State *L)
+int msq_luaopen(lua_State *L)
 {
-  gL = L;
-  luaL_register(gL, "msq", msq_funcs);
-  return 0; 
+  lua_newtable(L);
+  luaL_setfuncs (L,msq_funcs,0);
+  lua_pushvalue(L,-1);
+  lua_setglobal(L,"msq");
+  return 0;
 }
+

@@ -30,33 +30,66 @@
 					<Add option="-s" />
 				</Linker>
 			</Target>
+			<Target title="lmsq">
+				<Option output="lmsql" prefix_auto="1" extension_auto="1" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option use_console_runner="0" />
+				<Compiler>
+					<Add directory="../lua/src" />
+				</Compiler>
+				<Linker>
+					<Add library="..\lua\src\liblua.a" />
+					<Add directory="../lua/src" />
+				</Linker>
+			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
 		<Unit filename="src/mf_chords.c">
 			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
 		</Unit>
-		<Unit filename="src/mf_chords.h" />
+		<Unit filename="src/mf_chords.h">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
 		<Unit filename="src/mf_errors.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/mf_errors.h" />
 		<Unit filename="src/mf_instr.c">
 			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
 		</Unit>
-		<Unit filename="src/mf_instr.h" />
+		<Unit filename="src/mf_instr.h">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/mf_lua.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
 		<Unit filename="src/mf_rw.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/mf_rw.h" />
 		<Unit filename="src/mf_score.c">
 			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
 		</Unit>
 		<Unit filename="src/mf_seq.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/mf_seq.h" />
+		<Unit filename="src/msq.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
 		<Extensions>
 			<code_completion />
 			<envvars />
