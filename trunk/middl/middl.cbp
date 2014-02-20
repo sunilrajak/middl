@@ -31,7 +31,7 @@
 				</Linker>
 			</Target>
 			<Target title="lmsq">
-				<Option output="lmsql" prefix_auto="1" extension_auto="1" />
+				<Option output="src/lsq" prefix_auto="1" extension_auto="1" />
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Option use_console_runner="0" />
@@ -47,6 +47,247 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="lpeg/lpcap.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lpeg/lpcap.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lpeg/lpcode.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lpeg/lpcode.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lpeg/lpprint.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lpeg/lpprint.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lpeg/lptree.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lpeg/lptree.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lpeg/lptypes.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lpeg/lpvm.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lpeg/lpvm.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lapi.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lapi.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lauxlib.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lauxlib.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lbaselib.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lbitlib.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lcode.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lcode.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lcorolib.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lctype.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lctype.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/ldblib.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/ldebug.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/ldebug.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/ldo.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/ldo.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/ldump.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lfunc.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lfunc.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lgc.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lgc.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/linit.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/liolib.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/llex.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/llex.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/llimits.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lmathlib.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lmem.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lmem.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/loadlib.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lobject.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lobject.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lopcodes.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lopcodes.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/loslib.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lparser.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lparser.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lstate.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lstate.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lstring.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lstring.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lstrlib.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/ltable.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/ltable.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/ltablib.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/ltm.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/ltm.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lua.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lua.hpp">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/luaconf.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lualib.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lundump.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lundump.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lvm.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lvm.h">
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lzio.c">
+			<Option compilerVar="CC" />
+			<Option target="lmsq" />
+		</Unit>
+		<Unit filename="lua/src/lzio.h">
+			<Option target="lmsq" />
+		</Unit>
 		<Unit filename="src/mf_chords.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug" />
