@@ -36,12 +36,8 @@
 				<Option compiler="gcc" />
 				<Option use_console_runner="0" />
 				<Compiler>
-					<Add directory="../lua/src" />
+					<Add directory="lua/src" />
 				</Compiler>
-				<Linker>
-					<Add library="..\lua\src\liblua.a" />
-					<Add directory="../lua/src" />
-				</Linker>
 			</Target>
 		</Build>
 		<Compiler>
