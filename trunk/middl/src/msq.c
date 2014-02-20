@@ -22,7 +22,8 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
-int msq_luaopen(lua_State *L);
+int luaopen_msq(lua_State *L);
+int luaopen_lpeg(lua_State *L);
 
 int main(int argc, char *argv[])
 {
@@ -37,7 +38,8 @@ int main(int argc, char *argv[])
   L = luaL_newstate();
 
   luaL_openlibs(L);
-  msq_luaopen(L);
+  luaopen_msq(L);
+  lua_setglobal(L,"msq");
   luaopen_lpeg(L);
   lua_setglobal(L,"lpeg");
 

@@ -53,12 +53,11 @@ static struct luaL_Reg msq_funcs[5] = {
   {NULL, NULL}
 };
 
-int msq_luaopen(lua_State *L)
+int luaopen_msq(lua_State *L)
 {
   lua_newtable(L);
   luaL_setfuncs (L,msq_funcs,0);
   lua_pushvalue(L,-1);
-  lua_setglobal(L,"msq");
-  return 0;
+  return 1;  /* Leave table on the top */
 }
 
