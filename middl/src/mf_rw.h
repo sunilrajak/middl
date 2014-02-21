@@ -18,8 +18,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <strings.h>             
-             
+#include <strings.h>
+
 typedef int (*mf_fn_error   ) (short err, char *msg);
 typedef int (*mf_fn_header  ) (short type, short ntracks, short division);
 typedef int (*mf_fn_track   ) (short eot, short tracknum, unsigned long tracklen);
@@ -29,15 +29,32 @@ typedef int (*mf_fn_sys_evt ) (unsigned long delta, short type, short aux,
                                               long len, unsigned char *data);
 
 
+typedef struct {
+  FILE            *file        ;
+  unsigned char   *chrbuf      ;
+  unsigned long    chrbuf_sz   ;
+  mf_fn_error      on_error    ;
+  mf_fn_header     on_header   ;
+  mf_fn_track      on_track    ;
+  mf_fn_midi_evt   on_midi_evt ;
+  mf_fn_sys_evt    on_sys_evt  ;
+  void            *aux;
+} mf_reader;
+
+
+int mf_scan(mf_reader *mfile);
+
+void mf_reader_close(mf_reader *mr);
+
 int mf_read( char           *fname       ,
              mf_fn_error     fn_error    ,
              mf_fn_header    fn_header   ,
              mf_fn_track     fn_track    ,
              mf_fn_midi_evt  fn_midi_evt ,
-             mf_fn_sys_evt   fn_sys_evt 
+             mf_fn_sys_evt   fn_sys_evt
            );
 
-           
+
 #define cc_bank_select                     0x00
 #define cc_modulation_wheel                0x01
 #define cc_breath_controller               0x02
@@ -191,7 +208,7 @@ typedef struct {
   short trk_cnt;         /* How many tracks? */
   short division;
   short trk_in;          /* 0: before track 1: in track */
-  short chan;            /* current channel  (0-15) */  
+  short chan;            /* current channel  (0-15) */
 } mf_writer;
 
 mf_writer *mf_new (char *fname, short division);
@@ -204,7 +221,7 @@ int mf_midi_evt (mf_writer *mw, unsigned long delta, short type, short chan,
                                                   short data1, short data2);
 int mf_sys_evt  (mf_writer *mw, unsigned long delta, short type, short aux,
                                                   long len, unsigned char *data);
-                                                  
+
 int mf_text_evt (mf_writer *mw, unsigned long delta, short type, char *txt);
 
 
@@ -239,16 +256,16 @@ void mf_sequencer_specific(unsigned long delta, long len, char *data);
 */
 
 
-#define mf_text(m,d,t)              mf_text_evt(m, d, me_text             ,t) 
-#define mf_copyright_notice(m,d,t)  mf_text_evt(m, d, me_copyright_notice ,t) 
-#define mf_sequence_name(m,d,t)     mf_text_evt(m, d, me_sequence_name    ,t) 
-#define mf_track_name(m,d,t)        mf_text_evt(m, d, me_track_name       ,t) 
-#define mf_instrument_name(m,d,t)   mf_text_evt(m, d, me_instrument_name  ,t) 
-#define mf_lyric(m,d,t)             mf_text_evt(m, d, me_lyric            ,t) 
-#define mf_marker(m,d,t)            mf_text_evt(m, d, me_marker           ,t) 
-#define mf_cue_point(m,d,t)         mf_text_evt(m, d, me_cue_point        ,t) 
-#define mf_device_name(m,d,t)       mf_text_evt(m, d, me_device_name      ,t) 
-#define mf_program_name(m,d,t)      mf_text_evt(m, d, me_program_name     ,t) 
+#define mf_text(m,d,t)              mf_text_evt(m, d, me_text             ,t)
+#define mf_copyright_notice(m,d,t)  mf_text_evt(m, d, me_copyright_notice ,t)
+#define mf_sequence_name(m,d,t)     mf_text_evt(m, d, me_sequence_name    ,t)
+#define mf_track_name(m,d,t)        mf_text_evt(m, d, me_track_name       ,t)
+#define mf_instrument_name(m,d,t)   mf_text_evt(m, d, me_instrument_name  ,t)
+#define mf_lyric(m,d,t)             mf_text_evt(m, d, me_lyric            ,t)
+#define mf_marker(m,d,t)            mf_text_evt(m, d, me_marker           ,t)
+#define mf_cue_point(m,d,t)         mf_text_evt(m, d, me_cue_point        ,t)
+#define mf_device_name(m,d,t)       mf_text_evt(m, d, me_device_name      ,t)
+#define mf_program_name(m,d,t)      mf_text_evt(m, d, me_program_name     ,t)
 
 int mf_numparms(int s);
 

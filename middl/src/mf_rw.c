@@ -14,19 +14,19 @@
 
 #include "mf_rw.h"
 
-typedef struct {
-  FILE            *file        ;
-  unsigned char   *chrbuf      ;
-  unsigned long    chrbuf_sz   ;
-  mf_fn_error      on_error    ;
-  mf_fn_header     on_header   ;
-  mf_fn_track      on_track    ;
-  mf_fn_midi_evt   on_midi_evt ;
-  mf_fn_sys_evt    on_sys_evt  ;
-} mf_reader;
-
 #define MThd 0x4d546864
 #define MTrk 0x4d54726b
+
+/*
+ooooooooo.   oooooooooooo       .o.       oooooooooo.
+`888   `Y88. `888'     `8      .888.      `888'   `Y8b
+ 888   .d88'  888             .8"888.      888      888
+ 888ooo88P'   888oooo8       .8' `888.     888      888
+ 888`88b.     888    "      .88ooo8888.    888      888
+ 888  `88b.   888       o  .8'     `888.   888     d88'
+o888o  o888o o888ooooood8 o88o     o8888o o888bood8P'
+*/
+
 
 /* Get the number of parameters needed by a channel message.
 ** s is the status byte.
@@ -140,7 +140,7 @@ static unsigned char *readmsg(mf_reader *mfile, long n)
 #define GOTOEND      GOTO(FINAL)
 #define FALLTHROUGH  do {ERROR=ERROR;} while (0)
 
-static int scan_midi(mf_reader *mfile)
+int mf_scan(mf_reader *mfile)
 {
   long tmp;
   long v1, v2;
@@ -295,37 +295,66 @@ static int mf_dmp_error(short err, char *msg)
 
 /*************************************************************/
 
+mf_reader *mf_reader_new(char  *fname)
+{
+  mf_reader *mr = NULL;
+  FILE      *f  = NULL;
+
+  f = fopen(fname,"rb");
+  if (f) {
+    mr = malloc(sizeof(mf_reader));
+    if (mr) {
+      mr->file = f;
+
+      mr->on_error    = mf_dmp_error    ;
+      mr->on_header   = mf_dmp_header   ;
+      mr->on_track    = mf_dmp_track    ;
+      mr->on_midi_evt = mf_dmp_midi_evt ;
+      mr->on_sys_evt  = mf_dmp_sys_evt  ;
+
+      mr->chrbuf      = NULL;
+      mr->chrbuf_sz   = 0;
+
+      mr->aux = NULL;
+    }
+  }
+  return mr;
+}
+
+void mf_reader_close(mf_reader *mr)
+{
+  if (mr) {
+    if (mr->file)   fclose(mr->file);
+    if (mr->chrbuf) free(mr->chrbuf);
+    free(mr);
+  }
+}
+
 int mf_read( char          *fname      , mf_fn_error   fn_error   ,
              mf_fn_header   fn_header  , mf_fn_track   fn_track   ,
              mf_fn_midi_evt fn_midi_evt, mf_fn_sys_evt fn_sys_evt  )
 {
   int ret = 0;
-  mf_reader  mr;
+  mf_reader  *mr;
 
-  mr.on_error    = fn_error    ? fn_error    : mf_dmp_error    ;
-  mr.on_header   = fn_header   ? fn_header   : mf_dmp_header   ;
-  mr.on_track    = fn_track    ? fn_track    : mf_dmp_track    ;
-  mr.on_midi_evt = fn_midi_evt ? fn_midi_evt : mf_dmp_midi_evt ;
-  mr.on_sys_evt  = fn_sys_evt  ? fn_sys_evt  : mf_dmp_sys_evt  ;
+  mr = mf_reader_new(fname);
 
-  mr.chrbuf    = NULL;
-  mr.chrbuf_sz = 0;
+  if (!mr) return 79;
 
-  mr.file = fopen(fname, "rb");
-  if ( mr.file == NULL) {
-    mr.on_error(79,"File not found");
-    return -1;
-  }
+  if (fn_error)    mr->on_error    = fn_error;
+  if (fn_header)   mr->on_header   = fn_header;
+  if (fn_track)    mr->on_track    = fn_track;
+  if (fn_midi_evt) mr->on_midi_evt = fn_midi_evt;
+  if (fn_sys_evt)  mr->on_sys_evt  = fn_sys_evt;
 
-  ret = scan_midi(&mr);
+  ret = mf_scan(mr);
 
-  if (mr.file)   fclose(mr.file);
-  if (mr.chrbuf) free(mr.chrbuf);
+  mf_reader_close(mr);
 
   return ret;
 }
 
-/*****************************************************************************/
+/***************************************************************/
 
 #ifdef MF_READ_TEST
 int main(int argc, char *argv[])
@@ -340,7 +369,19 @@ int main(int argc, char *argv[])
 #endif
 
 /*****************************************************************************/
+/*
+oooooo   oooooo     oooo ooooooooo.   ooooo ooooooooooooo oooooooooooo
+ `888.    `888.     .8'  `888   `Y88. `888' 8'   888   `8 `888'     `8
+  `888.   .8888.   .8'    888   .d88'  888       888       888
+   `888  .8'`888. .8'     888ooo88P'   888       888       888oooo8
+    `888.8'  `888.8'      888`88b.     888       888       888    "
+     `888'    `888'       888  `88b.   888       888       888       o
+      `8'      `8'       o888o  o888o o888o     o888o     o888ooooood8
 
+
+
+*/
+/*****************************************************************************/
 #define eputc(c)  (mw->trk_len++, fputc(c,mw->file))
 
 static void f_write8(mf_writer *mw, unsigned char n)
