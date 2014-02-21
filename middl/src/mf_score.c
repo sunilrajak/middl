@@ -1001,6 +1001,16 @@ static void setkey(trk_data *trks)
 
 #endif /**/
 
+static void setchannel(trk_data *trks)
+{
+
+  short n;
+  skipctrl(trks);
+  n = getnum(trks);
+  if ( n < 1 || 16 < n) SCORE_FAIL(trks,906);
+  trks->chan[trks->track] = n-1;
+}
+
 static void setinstr(trk_data *trks)
 {
   unsigned char  c;
@@ -1030,20 +1040,16 @@ static void setinstr(trk_data *trks)
   }
 
   if (n < 0) SCORE_FAIL(trks, 903);
-
-  trks->err = seq_evt(trks, st_program_change, n, 0);
-  if (!trks->err && k>0)
-    trks->err = seq_sys(trks, st_meta_event, me_instrument_name, k, (unsigned char *)iname);
-}
-
-static void setchannel(trk_data *trks)
-{
-
-  short n;
-  skipctrl(trks);
-  n = getnum(trks);
-  if ( n < 1 || 16 < n) SCORE_FAIL(trks,906);
-  trks->chan[trks->track] = n-1;
+  if (n < 128) {
+    trks->err = seq_evt(trks, st_program_change, n, 0);
+    if (!trks->err && k>0)
+      trks->err = seq_sys(trks, st_meta_event, me_instrument_name, k, (unsigned char *)iname);
+  }
+  else {  /* drums */
+    n &= 0x7F;
+    trks->chan[trks->track] = 9;
+    trks->notes[trks->track][0] = n;
+  }
 }
 
 static void setcc(trk_data *trks)
