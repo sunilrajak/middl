@@ -17,32 +17,31 @@
 mf_seq *mf_seq_new (char *fname, short division)
 {
 
-  mf_seq *ms;
+  mf_seq *ms = NULL;
 
   ms = malloc(sizeof(mf_seq));
 
-  if (!ms) { return NULL; }
+  if (ms) {
+    ms->buf     = NULL;
+    ms->buf_cnt = 0;
+    ms->buf_max = 0;
 
-  ms->buf     = NULL;
-  ms->buf_cnt = 0;
-  ms->buf_max = 0;
+    ms->evt     = NULL;
+    ms->evt_cnt = 0;
+    ms->evt_max = 0;
 
-  ms->evt     = NULL;
-  ms->evt_cnt = 0;
-  ms->evt_max = 0;
+    ms->fname    = fname;
+    ms->division = division;
+    ms->curtrack = 0;
 
-  ms->fname    = fname;
-  ms->division = division;
-  ms->curtrack = 0;
-
-  ms->type     = mf_type_seq;
-
+    ms->type     = mf_type_seq;
+  }
   return ms;
 }
 
-#if 1
 #define getlong(q)  ((q)[0] << 24 | (q)[1] << 16 | (q)[2] << 8 | (q)[3])
 
+#if 0
 static void dmp_evts(mf_seq *ms)
 {
   unsigned long k;
@@ -127,7 +126,11 @@ int mf_seq_close(mf_seq *ms)
 
   if (mw) {
 
-    for (k=0; k< ms->evt_cnt; k++) {
+    if (ms->evt_cnt == 0) {
+         mf_track_start(mw);
+         mf_sys_evt(mw, 0, st_meta_event, me_text, 5, (unsigned char *)"Empty");
+    }
+    else for (k=0; k< ms->evt_cnt; k++) {
        p = ms->evt[k].p;
 
        if ((int)(*p) != trk) {  /* Start a new track */
