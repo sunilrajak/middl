@@ -319,6 +319,16 @@
 			<Option target="Debug" />
 			<Option target="Release" />
 		</Unit>
+		<Unit filename="src/mf_score.h">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/mf_score.lua" />
+		<Unit filename="src/mf_score_demacro.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
 		<Unit filename="src/mf_seq.c">
 			<Option compilerVar="CC" />
 		</Unit>
