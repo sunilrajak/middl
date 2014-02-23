@@ -12,328 +12,21 @@
 ** express or implied warranty.
 */
 
-#include "mf_seq.h"
-#include "mf_chords.h"
-#include "mf_instr.h"
-#include "mf_errors.h"
-#include <setjmp.h>
 
-#if 1 /*  **** MACRO EXPANSION */
-
-/*
-   $macro-name{jsjakdjks}
-   $macro-name
-*/
-
-static int is_idchar(unsigned char c)
-{
-  return (c && (('A' <= c && c <= 'Z') ||
-                ('a' <= c && c <= 'z') ||
-                (c == '_')) );
-}
-
-static int is_macro_def(unsigned char *q)
-{
-   while (is_idchar(*q))  q++;
-   _dbgmsg("ismacro: [%s][%s]\n",p,q);
-   return (*q == '{');
-}
-
-typedef struct {
-  unsigned char **macro_vec;
-  unsigned long   macro_cnt;
-  unsigned long   macro_max;
-} macro_defs;
-
-#define MACRO_INCR 512
-
-static int chkmacro(macro_defs *m, unsigned long n)
-{
-  unsigned long newmax;
-  unsigned char **vec;
-
-  if (!m) return 0;
-
-  newmax = m->macro_max;
-  while (n >= (newmax - m->macro_cnt))
-    newmax += MACRO_INCR;
-
-  if (newmax > m->macro_max) {
-    vec = realloc(m->macro_vec, newmax * sizeof(unsigned char *));
-    if (!vec) return 0;
-    m->macro_vec = vec;
-    m->macro_max = newmax;
-  }
-  return (m->macro_vec != NULL);
-}
-
-static unsigned char *skip_identifier(unsigned char *q)
-{
-   while (is_idchar(*q)) q++;
-   return q-1;
-}
-
-static int id_cmp(unsigned char *a,unsigned char *b)
-{
-  while (is_idchar(*a) && is_idchar(*b) && (*a == *b)) {a++; b++;}
-
-  if (is_idchar(*a) || is_idchar(*b)) return (*a - *b);
-  return 0;
-}
-
-static unsigned char *getmacro(macro_defs *m,unsigned char *p)
-{
-   int k;
-   _dbgmsg("getmacro: %s\n",p);
-   for (k=0; k < m->macro_cnt; k++) {
-     if (id_cmp(m->macro_vec[k] , p) == 0) {
-       p = m->macro_vec[k];
-       while (*p && *p != '{') p++;
-       return p;
-     }
-   }
-   return NULL;
-}
-
-typedef struct {
-  unsigned char *buf;
-  unsigned long  buf_cnt;
-  unsigned long  buf_max;
-} charbuf;
-
-#define BUF_INCR (128*1024)
-
-static int chkbuf(charbuf *b, unsigned long n)
-{
-  unsigned long newmax;
-  unsigned char *buf;
-
-  if (!b) return 0;
-
-  newmax = b->buf_max;
-  while (n >= (newmax - b->buf_cnt))
-    newmax += BUF_INCR;
-
-  if (newmax > b->buf_max) {
-    buf = realloc(b->buf, newmax);
-    if (!buf) return 0;
-    b->buf = buf;
-    b->buf_max = newmax;
-  }
-  return (b->buf != NULL);
-}
-
-
-static void addchar(charbuf *b, unsigned char c)
-{
-  if (chkbuf(b,2)) {
-    b->buf[b->buf_cnt++] = c;
-    b->buf[b->buf_cnt] = '\0';
-  }
-}
-
-static void addstring(charbuf *b, char *s)
-{
-  while (*s) addchar(b,*s++);
-}
-
-static unsigned long addlong(charbuf *b, unsigned long n)
-{
-  char data[16];
-  char *p;
-  sprintf(data,"%lu",n);
-  p=data;
-  while (*p) addchar(b,*p++);
-  addchar(b,' ');
-  return 0;
-}
-
-#define MAX_STK_TOP 128
-
-#define MACRO_FAIL(x) do {if (buf.buf) free(buf.buf); *err = line * 1000 + (x); return p;} while(0)
-
-#define addline(b,x) do { addchar(b,'\t'); addlong(b, x); } while (0)
-
-static unsigned char *demacro(unsigned char *inbuf, int *err)
-{
-  macro_defs macros;
-  charbuf buf;
-
-  unsigned long line = 0;
-
-  unsigned char *p = inbuf;
-  unsigned char *q;
-
-  unsigned char *stk[MAX_STK_TOP];
-  unsigned long  stk_ln[MAX_STK_TOP];
-  int stk_top = 0;
-
-  macros.macro_vec = NULL;
-  macros.macro_cnt = 0;
-  macros.macro_max = 0;
-  *err = 0;
-
-  buf.buf = NULL;
-  buf.buf_cnt = 0;
-  buf.buf_max = 0;
-
-  addchar(&buf,'\n');
-  addline(&buf,++line);
-
-  while (*p) {
-    if (*p == '}') {
-      if (stk_top == 0) MACRO_FAIL(901); /* stray close brace */
-      stk_top--;
-      p = stk[stk_top];
-      line = stk_ln[stk_top];
-      addchar(&buf,'\n'); addline(&buf, line);
-    } else if (*p == '\t') {
-      addchar(&buf,' ');
-    } else if (*p == '\r') {
-      if (p[1] != '\n') {
-        addchar(&buf,'\n');
-        if (stk_top == 0) {addline(&buf, ++line); }
-      }
-    } else if (*p == '\n') {
-      addchar(&buf,'\n');
-      if (stk_top == 0) { addline(&buf, ++line);  }
-    } else if (*p == '{') {
-      MACRO_FAIL(903);                   /* stray open brace */
-    } else if (*p == ')' && p[1] == '&') { /*  transform ")&" in "&)"  */
-      addchar(&buf,'&');addchar(&buf,')'); p++;
-    } else if (*p == '$') {
-      if (p[1] == '$') {
-         addchar(&buf,'$'); p++;
-      }
-      else if (isdigit(p[1])) {
-         if (p[1] == '0') MACRO_FAIL(909);
-         addchar(&buf,'$'); addchar(&buf,p[1]);
-         p++;
-      }
-      else if (p[1] == '[') {
-         p+=2;
-         if (p[1] != ']') MACRO_FAIL(905);
-         switch (*p) {
-           case '1' : addstring(&buf,"[$1  & $3  & $5 ]"); break;
-           case '2' : addstring(&buf,"[$2  & $4  & $6 ]"); break;
-           case '3' : addstring(&buf,"[$3  & $5  & $7 ]"); break;
-           case '4' : addstring(&buf,"[$4  & $6  & $1']"); break;
-           case '5' : addstring(&buf,"[$5, & $7, & $2 ]"); break;
-           case '6' : addstring(&buf,"[$6, & $1  & $3 ]"); break;
-           case '7' : addstring(&buf,"[$7, & $2  & $4 ]"); break;
-           default  : MACRO_FAIL(905);
-         }
-         p++;
-      }
-      else if (is_macro_def(p+1)) {
-        p++;
-        if (chkmacro(&macros,1)) {
-          macros.macro_vec[macros.macro_cnt++] = p;
-          while (*p && *p != '}') {
-            if (*p == '\n') line++;
-            if (*p == '\r' &&  p[1] != '\n') line++;
-            p++;
-          }
-        }
-      }
-      else {
-        q = getmacro(&macros, p+1);
-        if (q) {
-          _dbgmsg("foundmacro: %s\n",q);
-          if (stk_top == MAX_STK_TOP) MACRO_FAIL(902); /* too many levels (infinite loop?) */
-          stk[stk_top] = skip_identifier(p+1);
-          stk_ln[stk_top] = line;
-          p = q;
-          stk_top++;
-        }
-        else MACRO_FAIL(904); /* undefined macro */
-      }
-    }
-    else if (*p == '%') { /* strip Comment */
-      while (*p && *p != '\r' && *p != '\n') p++;
-      if (*p == '\r' && p[1] == '\n') p++;
-      addchar(&buf,'\n'); addline(&buf, ++line);
-    }
-    else  addchar(&buf,*p);
-
-    if (*p) p++;
-  }
-  addchar(&buf,'\n');
-  addline(&buf, ++line);
-
-  #if 0
-  fprintf(stderr,"%s",buf.buf);
-  dbgmsg("macros: %d\n", macros.macro_cnt);
-  {
-    int k;
-    for (k=0;k<macros.macro_cnt;k++) {
-      dbgmsg("%s\n",macros.macro_vec[k]);
-    }
-  }
-  exit(1);
-  #endif
-  return buf.buf;
-}
-
-#endif /* */
+#include "mf_score.h"
 
 #if 1 /*  **** PARSING */
+/*
+ooooooooo.         .o.       ooooooooo.    .oooooo..o oooooooooooo
+`888   `Y88.      .888.      `888   `Y88. d8P'    `Y8 `888'     `8
+ 888   .d88'     .8"888.      888   .d88' Y88bo.       888
+ 888ooo88P'     .8' `888.     888ooo88P'   `"Y8888o.   888oooo8
+ 888           .88ooo8888.    888`88b.         `"Y88b  888    "
+ 888          .8'     `888.   888  `88b.  oo     .d8P  888       o
+o888o        o88o     o8888o o888o  o888o 8""88888P'  o888ooooood8
+*/
 
-#define MAX_TRACKS  20
-#define MAX_REPT    32
-#define MAX_TRGT    10
-#define MAX_SCALE   16
-#define MAX_CHORDN  16
-#define DUR_INFINITE 0xFFFFFFFF
 
-#define SCORE_FAIL(t,e) ((t)->err = (e), longjmp((t)->errjmp, (e)))
-
-#define FLG_RAWCHORD 0x01
-#define FLG_NOPLAY   0x02
-
-#define flg_set(x,f)  ((x)->flags |=  (f))
-#define flg_clr(x,f)  ((x)->flags &= ~(f))
-#define flg_chk(x,f)  ((x)->flags & (f))
-
-typedef struct { /* trk_data */
-  mf_seq *ms;
-  unsigned char *buf;
-  unsigned char *ptr;
-  unsigned long line;
-  jmp_buf errjmp;
-  unsigned long flags;
-  short ppqn;
-
-  short track;
-  short err;
-
-  short num;
-  short den;
-
-  short lastnote;
-  short notepct;
-
-  short rpt_top;
-  unsigned char *rpt_pos[MAX_REPT];
-           short rpt_cnt[MAX_REPT];
-
-  unsigned long     trgt[MAX_TRGT];
-
-  unsigned long   trgt_r[MAX_TRGT];
-           short  trgt_n;
-
-  unsigned char    scale[MAX_SCALE];
-  unsigned short scale_n;
-
-  unsigned long    tick[MAX_TRACKS];
-  unsigned long     dur[MAX_TRACKS];
-  unsigned char   notes[MAX_TRACKS][MAX_CHORDN];
-  unsigned char chord_n[MAX_TRACKS];
-  unsigned char    chan[MAX_TRACKS];
-  unsigned char    inst[MAX_TRACKS];
-  unsigned char     vel[MAX_TRACKS];
-  unsigned char     oct[MAX_TRACKS];
-} trk_data;
 
 static unsigned char *mnotes = (unsigned char *)"\x09\x0B\x00\x02\x04\x05\x07";
 
@@ -788,6 +481,17 @@ static void skipctrl(trk_data *trks)
 
 static void setvol(trk_data *trks)
 {
+  short n = 0;
+  unsigned char  c;
+
+  skipctrl(trks);
+  c = ch_cur(trks);
+  if (isdigit(c)) {
+    n = getnum(trks);
+  } else {
+    SCORE_FAIL(trks,908);
+  }
+  trks->err = seq_evt(trks, st_control_change, cc_channel_volume, n);
 }
 
 static void setvel(trk_data *trks)
@@ -1100,6 +804,48 @@ static void ctrl(trk_data *trks)
   else    { SCORE_FAIL(trks,902); }
 }
 
+/* ppp: 16 pp: 32 p: 48 mp: 64 mf: 80 f: 96 ff: 112 fff: 127 */
+/*                0   1   2   3   4   5   6   7
+                  ppp pp  p   mp  mf  f   ff  fff */
+static char *dyn ="\x10\x20\x30\x40\x50\x60\x70\x7F";
+
+static int try_dynamics(trk_data *trks)
+{
+  unsigned char  c;
+  char *p;
+  short n = -1;
+  short k = 0 ;
+
+  p = (char *)ch_curptr(trks);
+
+       if (strncmp(p,"ppp", 3) == 0)  { n = 0; k = 3; }
+  else if (strncmp(p,"pp",  2) == 0)  { n = 1; k = 2; }
+  else if (strncmp(p,"p",   1) == 0)  { n = 2; k = 1; }
+  else if (strncmp(p,"mp",  2) == 0)  { n = 3; k = 2; }
+  else if (strncmp(p,"mf",  2) == 0)  { n = 4; k = 2; }
+  else if (strncmp(p,"fff", 3) == 0)  { n = 7; k = 3; }
+  else if (strncmp(p,"ff",  2) == 0)  { n = 6; k = 2; }
+  else if (strncmp(p,"f",   1) == 0)  { n = 5; k = 1; }
+
+  if (n<0) return 0;
+
+  trks->err = seq_evt(trks, st_control_change, cc_channel_volume, dyn[n]);
+
+  while (k--) ch_skip(trks);
+
+  return 1;
+}
+
+static void expression(trk_data *trks)
+{
+  char *p;
+  short done = 0;
+  ch_skip(trks);        /* skip ':' */
+
+  if (!done) done = try_dynamics(trks);
+
+}
+
 static void defvalue(trk_data *trks)
 {
   unsigned char c;
@@ -1250,6 +996,7 @@ static void parse(trk_data *trks)
     else if ( c == '&' )                          { rtarget(trks);     }
     else if ( c == '@' )                          { ctrl(trks);        }
     else if ( c == ':' )                          { defvalue(trks);    }
+    else if ( c == '!' )                          { expression(trks);  }
     else if ( c == '"' )                          { gettxt(trks);      }
     else if ( c == '\'' )                         { gettxt(trks);      }
     else if ( c == '(' )                          { rptstart(trks);    }
@@ -1317,6 +1064,13 @@ static int tomidi(char *fname, short division, unsigned char *s)
   tracks.ms = mf_seq_new(fname, division);
 
   if (tracks.ms) {
+
+    /* Set channels volume */
+    for (k=0; k<16; k++) {
+      mf_seq_evt(tracks.ms, 0, st_control_change, k, cc_channel_volume, 80);
+    }
+
+
     if ((err = setjmp(tracks.errjmp)) == 0) {
       parse(&tracks);
     }
@@ -1333,9 +1087,9 @@ static int tomidi(char *fname, short division, unsigned char *s)
 int mf_score(char *fname, short division, unsigned char *score)
 {
   unsigned char *p = NULL;
-  int err;
+  int err=0;
 
-  p = demacro(score, &err);
+  p = mf_demacro(score, &err);
   if (!err) {
     err = tomidi(fname, division, p);
     if (p) free(p);

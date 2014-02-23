@@ -24,7 +24,7 @@ char *mf_errmsg(unsigned long errnum)
     case 905: return "Invalid chord";
     case 906: return "Invalid channel";
     case 907: return "Invalid controller";
-    case 908: return "Invalid controller value";
+    case 908: return "Invalid value";
     case 909: return "Invalid scale note";
   }
 
