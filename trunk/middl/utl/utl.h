@@ -264,7 +264,7 @@ typedef struct utl_env_s {
 
 #endif
 
-
+#ifndef UTL_NOFSM
 /*  .% Finite state machine
 **  =======================
 **
@@ -295,19 +295,20 @@ typedef struct utl_env_s {
 ** documentation (e.g including the GraphViz description in comments).
 */
 
-#define fsmSTART  0
-#define fsmEND   -1
+#define fsmSTART -1
+#define fsmEND   -2
 
-#define fsm(x)  do { int fsm_next , fsm_state; \
-                      for (fsm_next=fsmSTART; fsm_next>fsmEND;) \
-                        switch((fsm_state=fsm_next, fsm_next=-1, fsm_state)) { \
+#define fsm(x)  do { int utl_fsm_next , utl_fsm_state; \
+                      for (utl_fsm_next=fsmSTART; utl_fsm_next>fsmEND;) \
+                        switch((utl_fsm_state=utl_fsm_next, utl_fsm_next=fsmEND, utl_fsm_state)) { \
                         x \
                 }} while (utlZero)
                          
-#define fsmGoto(x)  fsm_next = x; break
-#define fsmRestart  fsm_next = fsmSTART; break
-#define fsmExit     fsm_next = fsmEND; break
+#define fsmGoto(x)  utl_fsm_next = (x); break
+#define fsmRestart  utl_fsm_next = fsmSTART; break
+#define fsmExit     utl_fsm_next = fsmEND; break
 
+#endif
 
 /* .% UnitTest
 ** ===========
@@ -510,19 +511,19 @@ typedef struct {
   unsigned char  level;
   unsigned char  flags;
   unsigned short rot;
-} utl_log_s, *logger;
+} utl_log_s, *utlLogger;
 
-#define log_stdout_init {NULL, log_W, UTL_LOG_OUT,0}
-utl_extern(utl_log_s log_stdout , = log_stdout_init);
-utl_extern(logger logStdout , = &log_stdout);
+#define utl_log_stdout_init {NULL, log_W, UTL_LOG_OUT,0}
+utl_extern(utl_log_s utl_log_stdout , = utl_log_stdout_init);
+#define logStdout (&utl_log_stdout)
 
-#define log_stderr_init {NULL, log_W, UTL_LOG_ERR,0}
-utl_extern(utl_log_s log_stderr , = log_stderr_init);
-utl_extern(logger logStderr , = &log_stderr);
+#define utl_log_stderr_init {NULL, log_W, UTL_LOG_ERR,0}
+utl_extern(utl_log_s utl_log_stderr , = utl_log_stderr_init);
+#define logStderr (&utl_log_stderr)
 
 #define logNull NULL
 
-utl_extern(logger utl_logger , = logNull);
+utl_extern(utlLogger utl_logger , = logNull);
 
 #include <time.h>
 #include <ctype.h>
@@ -539,12 +540,12 @@ utl_extern(logger utl_logger , = logNull);
 
                                     /* 0   1   2   3   4   5   6   7   8   9    */
                                     /* 0   4   8   12  16  20  24  28  32  36   */
-utl_extern(char const log_abbrev[], = "FTL ALT CRT ERR WRN MSG INF DBG OFF LOG ");
+utl_extern(char const utl_log_abbrev[], = "FTL ALT CRT ERR WRN MSG INF DBG OFF LOG ");
 
-int   log_level(logger lg);
-int   log_chrlevel(char *l);
-int   logLevel(logger lg, char *lv); 
-int   logLevelEnv(logger lg, char *var, char *level);
+int   utl_log_level(utlLogger lg);
+int   utl_log_chrlevel(char *l);
+int   logLevel(utlLogger lg, char *lv); 
+int   logLevelEnv(utlLogger lg, char *var, char *level);
 
 /*
 ** The table below shows whether a message of a certain level will be
@@ -600,7 +601,7 @@ int   logLevelEnv(logger lg, char *var, char *level);
 ** using the '{=logOpen()} function.
 ** For example:
 ** .v  
-**   logger lgr = NULL;
+**   utlLogger lgr = NULL;
 **   logOpen(lgr,"file1.log","w") // Delete old log file and create a new one
 **   ...
 **   logOpen(lgr,"file1.log","a") // Append to previous log file
@@ -615,37 +616,40 @@ int   logLevelEnv(logger lg, char *var, char *level);
 ** bad will happen.
 */
 
-#define logOpen(l,f,m)   (l=log_open(f,m))
-#define logClose(l)      (log_close(l),l=NULL)
+#define logOpen(l,f,m)   (l=utl_log_open(f,m))
+#define logClose(l)      (utl_log_close(l),l=NULL)
 
-logger log_open(char *fname, char *mode);
-logger log_close(logger lg);
-void log_write(logger lg,int lv, int tstamp, char *format, ...);
-FILE *logFile(logger lg);
+utlLogger utl_log_open(char *fname, char *mode);
+utlLogger utl_log_close(utlLogger lg);
+void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 
-#define logIf(lg,lc) log_if(lg,log_chrlevel(lc))
+#define logFile(l) utl_logFile(l)
+#define logLevel(lg,lv)      utl_logLevel(lg,lv)
+#define logLevelEnv(lg,v,l)  utl_logLevelEnv(lg,v,l)
 
-#define log_if(lg,lv) if ((lv) > log_level(lg)) ((void)0) ; else
+#define logIf(lg,lc) utl_log_if(lg,utl_log_chrlevel(lc))
+
+#define utl_log_if(lg,lv) if ((lv) > utl_log_level(lg)) ((void)0) ; else
           
-#define logDebug(lg, ...)      log_write(lg, log_D, 1, __VA_ARGS__)
-#define logInfo(lg, ...)       log_write(lg, log_I, 1, __VA_ARGS__)
-#define logMessage(lg, ...)    log_write(lg, log_M, 1, __VA_ARGS__)
-#define logWarn(lg, ...)       log_write(lg, log_W, 1, __VA_ARGS__)
-#define logError(lg, ...)      log_write(lg, log_E, 1, __VA_ARGS__)
-#define logCritical(lg, ...)   log_write(lg, log_C, 1, __VA_ARGS__)
-#define logAlarm(lg, ...)      log_write(lg, log_A, 1, __VA_ARGS__)
-#define logFatal(lg, ...)      log_write(lg, log_F, 1, __VA_ARGS__)
+#define logDebug(lg, ...)      utl_log_write(lg, log_D, 1, __VA_ARGS__)
+#define logInfo(lg, ...)       utl_log_write(lg, log_I, 1, __VA_ARGS__)
+#define logMessage(lg, ...)    utl_log_write(lg, log_M, 1, __VA_ARGS__)
+#define logWarn(lg, ...)       utl_log_write(lg, log_W, 1, __VA_ARGS__)
+#define logError(lg, ...)      utl_log_write(lg, log_E, 1, __VA_ARGS__)
+#define logCritical(lg, ...)   utl_log_write(lg, log_C, 1, __VA_ARGS__)
+#define logAlarm(lg, ...)      utl_log_write(lg, log_A, 1, __VA_ARGS__)
+#define logFatal(lg, ...)      utl_log_write(lg, log_F, 1, __VA_ARGS__)
 
-#define logDContinue(lg, ...)  log_write(lg, log_D, 0, __VA_ARGS__)
-#define logIContinue(lg, ...)  log_write(lg, log_I, 0, __VA_ARGS__)
-#define logMContinue(lg, ...)  log_write(lg, log_M, 0, __VA_ARGS__)
-#define logWContinue(lg, ...)  log_write(lg, log_W, 0, __VA_ARGS__)
-#define logEContinue(lg, ...)  log_write(lg, log_E, 0, __VA_ARGS__)
-#define logCContinue(lg, ...)  log_write(lg, log_C, 0, __VA_ARGS__)
-#define logAContinue(lg, ...)  log_write(lg, log_A, 0, __VA_ARGS__)
-#define logFContinue(lg, ...)  log_write(lg, log_F, 0, __VA_ARGS__)
+#define logDContinue(lg, ...)  utl_log_write(lg, log_D, 0, __VA_ARGS__)
+#define logIContinue(lg, ...)  utl_log_write(lg, log_I, 0, __VA_ARGS__)
+#define logMContinue(lg, ...)  utl_log_write(lg, log_M, 0, __VA_ARGS__)
+#define logWContinue(lg, ...)  utl_log_write(lg, log_W, 0, __VA_ARGS__)
+#define logEContinue(lg, ...)  utl_log_write(lg, log_E, 0, __VA_ARGS__)
+#define logCContinue(lg, ...)  utl_log_write(lg, log_C, 0, __VA_ARGS__)
+#define logAContinue(lg, ...)  utl_log_write(lg, log_A, 0, __VA_ARGS__)
+#define logFContinue(lg, ...)  utl_log_write(lg, log_F, 0, __VA_ARGS__)
 
-#define logAssert(lg,e)        log_assert(lg, e, #e, __FILE__, __LINE__)
+#define logAssert(lg,e)        utl_log_assert(lg, e, #e, __FILE__, __LINE__)
 
 /*
 ** .v
@@ -660,9 +664,9 @@ FILE *logFile(logger lg);
 */
 
 #ifdef UTL_LIB
-int   log_level(logger lg) { return (int)(lg ? lg->level : log_X) ; }
+int   utl_log_level(utlLogger lg) { return (int)(lg ? lg->level : log_X) ; }
 
-FILE *logFile(logger lg)
+FILE *utl_logFile(utlLogger lg)
 {
   if (!lg) return NULL;
   if (lg->flags & UTL_LOG_ERR) return stderr;
@@ -670,37 +674,38 @@ FILE *logFile(logger lg)
   return lg->file;
 }
 
-int   log_chrlevel(char *l) {
+int   utl_log_chrlevel(char *l) {
   int i=0;
   char c = l ? toupper(l[0]) : 'W';
   
-  while (log_abbrev[i] != ' ' && log_abbrev[i] != c) i+=4;
+  while (utl_log_abbrev[i] != ' ' && utl_log_abbrev[i] != c) i+=4;
   i = (i <= 4*7) ? (i>> 2) : log_W;
   return i;
 }
 
-int logLevel(logger lg, char *lv) 
+
+int utl_logLevel(utlLogger lg, char *lv) 
 {
   if (!lg) return log_X;
   
   if (lv && lv[0] && lv[0] != '?')
-      lg->level = log_chrlevel(lv);
-  return log_level(lg);  
+      lg->level = utl_log_chrlevel(lv);
+  return utl_log_level(lg);  
 }
 
-int logLevelEnv(logger lg, char *var, char *level)
+int utl_logLevelEnv(utlLogger lg, char *var, char *level)
 {
   char *lvl_str;
   
   lvl_str=getenv(var);
   if (!lvl_str) lvl_str = level;
-  return logLevel(lg,lvl_str);
+  return utl_logLevel(lg,lvl_str);
 }
 
-logger log_open(char *fname, char *mode)
+utlLogger utl_log_open(char *fname, char *mode)
 {
   char md[4];
-  logger lg = logNull;
+  utlLogger lg = logNull;
   FILE *f = NULL;
   
   if (fname) {
@@ -715,10 +720,10 @@ logger log_open(char *fname, char *mode)
       lg->flags = 0;
       lg->rot = 0;
       lg->file = f;
-	  {/* Assume that log_L is the last level in log_abbrev */
-	    utlAssume( (log_L +1) == ((sizeof(log_abbrev)-1)>>2));
+	  {/* Assume that log_L is the last level in utl_log_abbrev */
+	    utlAssume( (log_L +1) == ((sizeof(utl_log_abbrev)-1)>>2));
         lg->level = log_L;
-        log_write(lg,log_L, 1, "%s \"%s\"", (md[0] == 'a') ? "ADDEDTO" : "CREATED",fname); 
+        utl_log_write(lg,log_L, 1, "%s \"%s\"", (md[0] == 'a') ? "ADDEDTO" : "CREATED",fname); 
 	  }
       lg->level = log_W;
 	}
@@ -727,7 +732,7 @@ logger log_open(char *fname, char *mode)
   return lg;
 }
 
-logger log_close(logger lg)
+utlLogger utl_log_close(utlLogger lg)
 {
   if (lg && lg != logStdout && lg != logStderr) {
     if (lg->file) fclose(lg->file);
@@ -745,12 +750,12 @@ logger log_close(logger lg)
 **      mylog_002.log
 **       etc...
 */
-static void log_rotate(logger lg)
+static void utl_log_rotate(utlLogger lg)
 {
   // TODO:
 }
 
-void log_write(logger lg, int lv, int tstamp, char *format, ...)
+void utl_log_write(utlLogger lg, int lv, int tstamp, char *format, ...)
 {
   va_list args;
   char tstr[32];
@@ -773,15 +778,15 @@ void log_write(logger lg, int lv, int tstamp, char *format, ...)
 	} else {
 	  strcmp(tstr,"                   ");          
 	}
-    fprintf(f, "%s %.4s", tstr, log_abbrev+(lv<<2));
+    fprintf(f, "%s %.4s", tstr, utl_log_abbrev+(lv<<2));
     va_start(args, format);  vfprintf(f,format, args);  va_end(args);
     fputc('\n',f);
     fflush(f);
-    if (lg->rot >0) log_rotate(lg);
+    if (lg->rot >0) utl_log_rotate(lg);
   }    
 }
 
-void log_assert(logger lg,int e,char *estr, char *file,int line)
+void utl_log_assert(utlLogger lg,int e,char *estr, char *file,int line)
 { 
   if (!e) {
     logFatal(lg,"Assertion failed:  %s, file %s, line %d", estr, file, line);
@@ -822,7 +827,7 @@ void log_assert(logger lg,int e,char *estr, char *file,int line)
 #define logOpen(lg,f,m) (lg=NULL)
 #define logClose(lg)    (lg=NULL)
 
-typedef void *logger;
+typedef void *utlLogger;
 
 #define logFile(x) NULL
 #define logStdout  NULL
@@ -856,7 +861,7 @@ void *utl_strdup  (void *ptr, char *file, int line);
 
 int utl_check(void *ptr,char *file, int line);
 
-utl_extern(logger utlMemLog , = &log_stderr);
+utl_extern(utlLogger utlMemLog , = &utl_log_stderr);
 
 #ifdef UTL_LIB
 /*************************************/
@@ -1050,26 +1055,30 @@ typedef struct {
 
 typedef char *chs_t;
 
-chs_t chs_setsize(chs_t s, long ndx);
-#define chsNew(s) (s = chs_setsize(NULL,0)) 
+chs_t utl_chs_setsize(chs_t s, long ndx);
+#define chsNew(s) (s = utl_chs_setsize(NULL,0)) 
 
-chs_t chs_free(chs_t s);
-#define chsFree(s) (s=chs_free(s))
+chs_t utl_chs_free(chs_t s);
+#define chsFree(s) (s=utl_chs_free(s))
 
-long chsLen(chs_t s);
-long chsSize(chs_t s);
+#define chsLen(s)  utl_chsLen(s)
+#define chsSize(s) utl_chsSize(s)
 
-char   chsChrAt  (chs_t s, long ndx);
+long utl_chsLen(chs_t s);
+long utl_chsSize(chs_t s);
 
-chs_t chs_set(chs_t s, long ndx, uint32_t c);
-#define chsSetChr(s, n, c) (s = chs_set(s,n,c))
+#define chsChrAt(s,n) utl_chsChrAt(s,n)
+char   utl_chsChrAt  (chs_t s, long ndx);
+
+chs_t utl_chs_set(chs_t s, long ndx, uint32_t c);
+#define chsSetChr(s, n, c) (s = utl_chs_set(s,n,c))
 
 #ifdef UTL_LIB
 
 #define chs_blk(s) ((chs_blk_t *)(((char*)(s)) - offsetof(chs_blk_t,chs)))
 #define chs_chs(b) ((char *)(((char *)b)+ offsetof(chs_blk_t,chs)))
 
-chs_t chs_setsize(chs_t s, long ndx)
+chs_t utl_chs_setsize(chs_t s, long ndx)
 {
   long sz = 0;
   chs_blk_t *cb = NULL;
@@ -1096,13 +1105,13 @@ chs_t chs_setsize(chs_t s, long ndx)
   return cb->chs;  
 }
 
-chs_t chs_free(chs_t s) { 
+chs_t utl_chs_free(chs_t s) { 
   logDebug(utl_logger,"FREE: %p",s);
   if (s) free(chs_blk(s));
   return NULL;
 }
 
-long chsLen(chs_t s)
+long utl_chsLen(chs_t s)
 {
   chs_blk_t *cb;
   long l;
@@ -1116,8 +1125,8 @@ static long fixndx(chs_t s, long n)
 {
   logDebug(utl_logger,"fixndx: %p  %d -> ",s,n);
   if (s) {
-    if (n < 0) n += chsLen(s);
-    if (n > chsLen(s)) n = chsLen(s)-1;
+    if (n < 0) n += utl_chsLen(s);
+    if (n > utl_chsLen(s)) n = utl_chsLen(s)-1;
   }
   if (n < 0) n = 0;
   logDContinue(utl_logger,"           %d",n);
@@ -1125,12 +1134,12 @@ static long fixndx(chs_t s, long n)
   return n;
 }
 
-chs_t chs_set(chs_t s, long ndx, uint32_t c)
+chs_t utl_chs_set(chs_t s, long ndx, uint32_t c)
 {
   chs_blk_t *cb;
   
   if (ndx < 0) ndx = fixndx(s,ndx);
-  s = chs_setsize(s,ndx+8); /* ensure enough space for an UTF char */
+  s = utl_chs_setsize(s,ndx+8); /* ensure enough space for an UTF char */
 
   s[ndx] = c;
   cb = chs_blk(s);
@@ -1145,10 +1154,10 @@ chs_t chs_set(chs_t s, long ndx, uint32_t c)
   return s;
 }
 
-char chsChrAt(chs_t s, long ndx)
+char utl_chsChrAt(chs_t s, long ndx)
 {
   ndx = fixndx(s,ndx);
-  return (s && ndx < chsLen(s)) ? s[ndx] : '\0';
+  return (s && ndx < utl_chsLen(s)) ? s[ndx] : '\0';
 }
 
 #endif  /*- UTL_LIB */
